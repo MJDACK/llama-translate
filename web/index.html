@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>提示词翻译台 · llama.cpp</title>
+<link rel="stylesheet" href="style.css?v=20">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo"></span>
+    <span class="name">提示词翻译台</span>
+    <span class="ver">llama.cpp · Qwen3.5</span>
+  </div>
+  <div class="grow"></div>
+  <div class="status" id="status" title="">
+    <i class="dot" id="dot"></i><span id="statusText">连接中…</span>
+  </div>
+  <button class="btn icon" id="btnRestart" title="重启本地 llama-server">↻</button>
+  <select id="modelSel" class="sel" title="切换模型"></select>
+  <button class="btn" id="btnDict">词典 <em id="dictCount">–</em></button>
+</header>
+
+<main class="main">
+  <section class="pane left">
+    <div class="tabs">
+      <button class="tab active" data-tab="text">文字翻译</button>
+      <button class="tab" data-tab="image">图片识图</button>
+      <button class="tab" data-tab="nl">自然语言</button>
+    </div>
+
+    <div class="tabbody" data-pane="text">
+      <textarea id="zh" spellcheck="false"
+        placeholder="中文粘进来就行，比如：
+清晨的雾气漫过山谷，一个穿红裙的女孩站在石桥上，远处有座废弃的灯塔。赛博朋克色调，电影级打光。"></textarea>
+      <div class="row wrap">
+        <div class="seg" id="dir">
+          <button data-d="zh2en" class="on">中 → 英</button>
+          <button data-d="en2zh">英 → 中</button>
+        </div>
+        <div class="seg" id="gran">
+          <button data-g="auto" class="on">自动</button>
+          <button data-g="sentence">按句</button>
+          <button data-g="phrase">按短语</button>
+        </div>
+        <span class="counter" id="zhCount">0 字</span>
+        <button class="btn sm ghost" id="btnSyncIn" hidden title="把当前各块的原文写回这个输入框">⟲ 同步块</button>
+        <button class="btn primary" id="btnGo">翻译 <span class="arr">→</span></button>
+      </div>
+      <div class="hint">Ctrl + Enter 开翻 · 原文和译文都能直接改，改原文会自动重译</div>
+    </div>
+
+    <div class="tabbody" data-pane="image" hidden>
+      <div class="drop" id="drop">
+        <input type="file" id="file" accept="image/*" hidden>
+        <div class="dropInner" id="dropInner">
+          <div class="dropIcon"></div>
+          <div class="dropTitle">拖图片进来 / 点这里选 / Ctrl+V 粘贴</div>
+          <div class="dropSub">会先缩到选定尺寸再喂给模型，快很多</div>
+        </div>
+        <img id="preview" alt="" hidden>
+      </div>
+      <div class="row wrap">
+        <div class="seg" id="imgSize">
+          <button data-s="512">512</button>
+          <button data-s="768" class="on">768</button>
+          <button data-s="1024">1024</button>
+        </div>
+        <div class="seg" id="imgMode">
+          <button data-m="cn" class="on">中文描述</button>
+          <button data-m="en">直接英文</button>
+        </div>
+        <button class="btn primary" id="btnVision">识图</button>
+      </div>
+      <textarea id="desc" spellcheck="false" placeholder="识图结果会写在这里（可以改），再翻成英文块。"></textarea>
+      <div class="row">
+        <button class="btn ghost" id="btnDescTranslate">把描述翻成英文块 ↓</button>
+        <span class="counter" id="imgMeta"></span>
+      </div>
+    </div>
+
+    <div class="tabbody" data-pane="nl" hidden>
+      <textarea id="nl" spellcheck="false"
+        placeholder="用中文说你要什么，模型直接给结果。比如：
+写 8 条英文提示词：雨夜赛博朋克少女，银发，透明雨伞，霓虹反光，浅景深，电影级打光，标签式
+
+或者：
+把「一个女孩站在桥上」扩写成 3 个不同风格的英文提示词版本"></textarea>
+      <div class="row wrap">
+        <span class="hint" style="margin-right:auto">中英成对，每行一块，可单独改、单独复制</span>
+        <span class="counter" id="nlCount">0 字</span>
+        <button class="btn primary" id="btnGen">生成 <span class="arr">→</span></button>
+      </div>
+      <div class="hint">Ctrl + Enter 生成 · 每块都有中文和英文</div>
+    </div>
+
+    <div class="leftgrip" id="leftGrip" title="拖动调整上下高度，双击复位"></div>
+
+    <section class="chatbox" id="chat">
+      <div class="chathead">
+        <strong>自然语言修改</strong>
+        <div class="seg" id="chatMode">
+          <button data-m="blocks" class="on">改提示词块</button>
+          <button data-m="input">改输入</button>
+        </div>
+        <div class="grow"></div>
+        <button class="btn sm" id="btnUndo">撤销上次</button>
+      </div>
+      <div class="chatlog" id="chatlog">
+        <div class="chathint">
+          <b>改提示词块</b>：只动右边对应块 · <b>改输入</b>：改写上面那段再重翻<br>
+          例：把头发改成白色 / 加一点下雨，地面要反光 / 删掉第 3 块 / 扩写得更详细
+        </div>
+      </div>
+      <div class="chatin">
+        <textarea id="chatInput" rows="2" spellcheck="false" placeholder="说要改什么，Enter 发送，Shift+Enter 换行"></textarea>
+        <div class="row">
+          <div class="grow"></div>
+          <button class="btn primary sm" id="btnChatSend">发送</button>
+        </div>
+      </div>
+    </section>
+  </section>
+
+  <section class="pane right">
+    <div class="toolbar">
+      <span class="binfo" id="blockInfo">0 块</span>
+      <div class="grow"></div>
+      <button class="btn sm" id="btnCopyAll">复制全部</button>
+      <button class="btn sm" id="btnCopyJoin">逗号串</button>
+      <button class="btn sm" id="btnAdd">＋ 块</button>
+      <button class="btn sm danger" id="btnClear">清空</button>
+    </div>
+    <div class="blocks" id="blocks"></div>
+    <div class="empty" id="emptyTip">
+      <div class="emptyTitle">还没有块</div>
+      <div class="emptySub">左边写原文翻译、上传图片识图，或者用自然语言直接说需求。</div>
+    </div>
+
+    <div class="output" id="output">
+      <div class="outgrip" id="outGrip" title="拖动调整高度"></div>
+      <div class="outbar">
+        <span class="outTitle">输出</span>
+        <span class="outCount" id="outCount"></span>
+        <div class="grow"></div>
+        <button class="btn sm" id="btnCopyZhOut">复制中文</button>
+        <button class="btn sm" id="btnCopyEnOut">复制英文</button>
+        <button class="btn sm icon" id="btnToggleOut" title="收起 / 展开">▾</button>
+      </div>
+      <div class="outbody" id="outBody">
+        <div class="outbox" id="outZhBox">
+          <div class="outlabel" id="outZhLabel">中文</div>
+          <textarea id="outZh" readonly spellcheck="false" placeholder="翻译完会汇总到这里"></textarea>
+        </div>
+        <div class="outbox" id="outEnBox">
+          <div class="outlabel" id="outEnLabel">English</div>
+          <textarea id="outEn" readonly spellcheck="false" placeholder="这里放英文译文"></textarea>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<aside class="drawer" id="drawer" hidden>
+  <div class="dhead">
+    <strong>AI 绘画词典</strong>
+    <span class="dsub" id="dictSub">–</span>
+    <div class="grow"></div>
+    <button class="btn sm" id="btnCloseDrawer">关闭</button>
+  </div>
+  <div class="dbody">
+    <div class="dsearch">
+      <input id="dictSearch" type="search" placeholder="搜中文或英文…">
+      <label class="chk" title="取消勾选会停用全部词条"><input type="checkbox" id="dictAll" checked><span>全部启用</span></label>
+    </div>
+    <div class="dcats" id="dictCats"></div>
+    <div class="dlist" id="dictList"></div>
+  </div>
+  <div class="dadd">
+    <div class="daddRow">
+      <input id="newZh" placeholder="中文">
+      <input id="newEn" placeholder="english">
+      <select id="newCat"></select>
+      <button class="btn sm" id="btnAddTerm">添加</button>
+    </div>
+  </div>
+</aside>
+
+<div class="toast" id="toast" hidden></div>
+<script src="app.js?v=20"></script>
+</body>
+</html>

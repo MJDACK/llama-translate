@@ -1,0 +1,12 @@
+# 运行时产物，不进仓库
+models/
+llama.cpp/
+runtime/
+logs/
+dist/
+
+# 通用
+node_modules/
+*.log
+.DS_Store
+Thumbs.db

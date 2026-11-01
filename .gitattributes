@@ -1,0 +1,6 @@
+# Keep Windows scripts and binaries byte-exact
+*.bat -text
+*.cmd -text
+*.exe binary
+*.ico binary
+*.png binary

@@ -1,0 +1,1257 @@
+'use strict';
+/* 提示词翻译台 —— 前端（双向翻译 + 原文编辑联动 + 自然语言修改） */
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => Array.from(document.querySelectorAll(s));
+const LS_KEY = 'tt.v2';
+
+const S = {
+  blocks: [],          // {a: 原文, b: 译文}
+  mode: 'auto',
+  dir: 'zh2en',        // 下一轮翻译方向
+  blockDir: 'zh2en',   // 当前这批块是用哪个方向翻出来的
+  imgSize: 768,
+  imgMode: 'cn',
+  image: null,
+  glossary: null,
+  server: null,
+  busy: false,
+  history: [],         // 自然语言修改历史
+  snapshots: [],       // 撤销栈
+  chatMode: 'blocks',  // blocks = 改提示词块，input = 改左边输入
+  nl: false,           // 当前这批块是「自然语言生成」出来的（没有原文）
+  tab: 'text',         // 当前页签
+  noSync: false        // 翻译/生成进行中，先别回写输入框（避免闪空）
+};
+
+let outHeight = 240;   // 输出区展开时的高度
+let chatH = 0;         // 左栏下半（自然语言修改）的高度，0 = 用默认比例
+
+const LABELS = {
+  zh2en: { src: '中文', dst: 'English', srcPh: '中文原文…', dstPh: '英文译文…' },
+  en2zh: { src: 'English', dst: '中文', srcPh: 'English 原文…', dstPh: '中文译文…' }
+};
+const curLabels = () => LABELS[S.blockDir] || LABELS.zh2en;
+
+/* ------------------------------ 小工具 ------------------------------ */
+let toastTimer = null;
+function toast(msg, ms = 1700) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, ms);
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (_) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (_) { }
+    ta.remove();
+    return ok;
+  }
+}
+
+function debounce(fn, ms) {
+  let t;
+  return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+}
+
+function autoGrow(el) {
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = Math.max(el.classList.contains('src') ? 18 : 24, el.scrollHeight + 2) + 'px';
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+const esc = escapeHtml;
+
+/* ------------------------------ 持久化 ------------------------------ */
+const saveLocal = debounce(() => {
+  try {
+    const out = $('#output');
+    if (out && !out.classList.contains('collapsed')) outHeight = out.offsetHeight;
+    localStorage.setItem(LS_KEY, JSON.stringify({
+      text: $('#zh').value,
+      desc: $('#desc').value,
+      nlText: $('#nl').value,
+      nl: S.nl,
+      tab: S.tab,
+      blocks: S.blocks,
+      mode: S.mode,
+      dir: S.dir,
+      blockDir: S.blockDir,
+      imgSize: S.imgSize,
+      imgMode: S.imgMode,
+      outH: outHeight,
+      chatH: chatH,
+      outCollapsed: out ? out.classList.contains('collapsed') : false
+    }));
+  } catch (_) { }
+}, 400);
+
+function restoreLocal() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    if (d.text) $('#zh').value = d.text;
+    if (d.desc) $('#desc').value = d.desc;
+    if (d.nlText) $('#nl').value = d.nlText;
+    if (typeof d.nl === 'boolean') S.nl = d.nl;
+    if (d.tab) { S.tab = d.tab; switchTab(d.tab); }
+    if (Array.isArray(d.blocks)) {
+      S.blocks = d.blocks.map(b => ({
+        a: b.a != null ? b.a : (b.zh || ''),
+        b: b.b != null ? b.b : (b.en || '')
+      }));
+    }
+    if (d.mode) S.mode = d.mode;
+    if (d.dir) S.dir = d.dir;
+    S.blockDir = d.blockDir || S.dir;
+    if (d.imgSize) S.imgSize = d.imgSize;
+    if (d.imgMode) S.imgMode = d.imgMode;
+    if (d.outH) outHeight = d.outH;
+    if (d.chatH) chatH = d.chatH;
+    if (d.outCollapsed) {
+      const o = $('#output');
+      if (o) { o.classList.add('collapsed'); o.style.height = ''; }
+      const b = $('#btnToggleOut');
+      if (b) b.textContent = '▸';
+    } else if (d.outH) {
+      const o = $('#output');
+      if (o) o.style.height = d.outH + 'px';
+    }
+  } catch (_) { }
+}
+
+/* ------------------------------ SSE ------------------------------ */
+async function streamSSE(url, body, handlers, signal) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal
+  });
+  if (!r.ok) {
+    let msg = `HTTP ${r.status}`;
+    try { msg = (await r.json()).error || msg; } catch (_) { }
+    throw new Error(msg);
+  }
+  const reader = r.body.getReader();
+  const dec = new TextDecoder();
+  let buf = '';
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let i;
+    while ((i = buf.indexOf('\n\n')) >= 0) {
+      const raw = buf.slice(0, i);
+      buf = buf.slice(i + 2);
+      let ev = 'message', data = '';
+      for (const line of raw.split('\n')) {
+        if (line.startsWith('event:')) ev = line.slice(6).trim();
+        else if (line.startsWith('data:')) data += line.slice(5).trim();
+      }
+      if (!data) continue;
+      let parsed;
+      try { parsed = JSON.parse(data); } catch (_) { continue; }
+      if (handlers[ev]) handlers[ev](parsed);
+    }
+  }
+}
+
+/* ------------------------------ 块渲染 ------------------------------ */
+function buildBlock(b, i) {
+  const L = curLabels();
+  const el = document.createElement('div');
+  el.className = 'block';
+  el.dataset.i = i;
+  el.innerHTML =
+    '<div class="bh">' +
+      '<span class="idx">' + String(i + 1).padStart(2, '0') + '</span>' +
+      '<span class="lang">' + esc(L.src) + '</span>' +
+      '<div class="ba">' +
+        '<button data-act="up" title="上移">↑</button>' +
+        '<button data-act="down" title="下移">↓</button>' +
+        '<button data-act="re" title="按原文重译这块">重译</button>' +
+        '<button data-act="copy" title="复制译文">复制</button>' +
+        '<button data-act="del" class="del" title="删除">✕</button>' +
+      '</div>' +
+    '</div>' +
+    '<textarea class="src" rows="1" spellcheck="false" placeholder="' + esc(L.srcPh) + '">' + esc(b.a || '') + '</textarea>' +
+    '<textarea class="tgt" rows="1" spellcheck="false" placeholder="' + esc(L.dstPh) + '">' + esc(b.b || '') + '</textarea>';
+  requestAnimationFrame(() => {
+    const s = el.querySelector('.src'); if (s) autoGrow(s);
+    const t = el.querySelector('.tgt'); if (t) autoGrow(t);
+  });
+  return el;
+}
+
+function renderBlocks() {
+  const box = $('#blocks');
+  box.innerHTML = '';
+  S.blocks.forEach((b, i) => box.appendChild(buildBlock(b, i)));
+  toggleEmpty();
+  updateInfo();
+}
+
+function toggleEmpty() {
+  $('#emptyTip').style.display = S.blocks.length ? 'none' : 'flex';
+}
+
+function updateInfo() {
+  const n = S.blocks.filter(b => (b.b || '').trim()).length;
+  $('#blockInfo').textContent = n + '/' + S.blocks.length + ' 块';
+  syncInputFromBlocks();   // 输入框跟着块走
+  updateOutput();
+  updateSyncBtn();
+}
+
+// 输入框和块不一致时，给一个手动同步的按钮
+function updateSyncBtn() {
+  const btn = $('#btnSyncIn');
+  if (!btn) return;
+  const joined = S.blocks.map(b => (b.a || '').trim()).filter(Boolean).join('\n');
+  const ta = inputEl();
+  btn.hidden = !(joined && ta && ta.value.trim() !== joined);
+}
+
+/* 底部输出区：不管方向如何，永远中文在上、英文在下 */
+function updateOutput() {
+  const zhEl = $('#outZh'), enEl = $('#outEn');
+  const boxZh = $('#outZhBox'), boxEn = $('#outEnBox');
+  const lblZh = $('#outZhLabel');
+  const cnt = $('#outCount');
+  if (!zhEl || !enEl) return;
+
+  if (lblZh) lblZh.textContent = '中文';
+  if (boxEn) boxEn.style.display = '';
+  if (boxZh) boxZh.style.gridRow = '';
+
+  const srcIsZh = S.blockDir !== 'en2zh';
+  const zh = [], en = [];
+  for (const b of S.blocks) {
+    const z = ((srcIsZh ? b.a : b.b) || '').trim();
+    const e = ((srcIsZh ? b.b : b.a) || '').trim();
+    if (z) zh.push(z);
+    if (e) en.push(e);
+  }
+  zhEl.value = zh.join('\n');
+  enEl.value = en.join('\n');
+  if (cnt) cnt.textContent = zh.length + ' 段中文 · ' + en.length + ' 段英文';
+}
+
+function setTarget(i, text) {
+  const el = document.querySelector('.block[data-i="' + i + '"] .tgt');
+  if (!el) return;
+  if (document.activeElement !== el) { el.value = text; autoGrow(el); }
+}
+
+function markStreaming(i) {
+  $$('.block').forEach(el => el.classList.remove('streaming'));
+  if (i >= 0) {
+    const el = document.querySelector('.block[data-i="' + i + '"]');
+    if (el) { el.classList.add('streaming'); el.scrollIntoView({ block: 'nearest' }); }
+  }
+}
+
+function flashBlock(i) {
+  const el = document.querySelector('.block[data-i="' + i + '"]');
+  if (!el) return;
+  el.classList.add('flash');
+  setTimeout(() => el.classList.remove('flash'), 1100);
+}
+
+function toggleOutput() {
+  const o = $('#output'), btn = $('#btnToggleOut');
+  if (o.classList.contains('collapsed')) {
+    o.classList.remove('collapsed');
+    o.style.height = outHeight + 'px';
+    btn.textContent = '▾';
+  } else {
+    outHeight = o.offsetHeight;
+    o.classList.add('collapsed');
+    o.style.height = '';
+    btn.textContent = '▸';
+  }
+  saveLocal();
+}
+
+/* ------------------------------ 翻译 ------------------------------ */
+// 同步目标就认「当前看得见的那一栏」：文字翻译 → 输入框，图片识图 → 描述框
+function activeTab() {
+  const el = document.querySelector('.tabbody:not([hidden])');
+  const n = el ? el.dataset.pane : 'text';
+  return (n === 'image' || n === 'nl') ? n : 'text';
+}
+// 同步目标：文字翻译 → 输入框，图片识图 → 描述框。
+// 自然语言页签里那个框放的是「指令」，不是内容，所以块永远不回写它
+const inputEl = () => (activeTab() === 'image' ? $('#desc') : $('#zh'));
+function bumpCounter() {
+  if ($('#zhCount')) $('#zhCount').textContent = $('#zh').value.length + ' 字';
+  if ($('#nlCount')) $('#nlCount').textContent = $('#nl').value.length + ' 字';
+}
+
+async function doTranslate(text, modeOverride, dirOverride) {
+  if (S.busy) return;
+  if (!text.trim()) { toast('先写点东西'); return; }
+  if (!S.server || S.server.status !== 'ready') {
+    toast(S.server ? '模型还没就绪：' + (S.server.message || '') : '后端没连上');
+    return;
+  }
+  setBusy(true);
+  const started = performance.now();
+  const ctrl = new AbortController();
+  const dir = dirOverride || S.dir;
+  S.nl = false;
+
+  try {
+    await streamSSE('/api/translate',
+      { text, mode: modeOverride || S.mode, direction: dir },
+      {
+        start: (d) => {
+          S.noSync = true;
+          S.blockDir = d.direction || dir;
+          S.blocks = d.units.map(u => ({ a: u, b: '' }));
+          renderBlocks();
+          $('#blocks').scrollTop = 0;
+          markStreaming(0);
+          $('#statusText').textContent = '翻译中 · 命中术语 ' + d.glossary.length;
+        },
+        line: (d) => {
+          const i = d.n - 1;
+          if (i < 0 || i >= S.blocks.length) return;
+          S.blocks[i].b = d.text;
+          setTarget(i, d.text);
+          markStreaming(i);
+          updateInfo();
+        },
+        done: (d) => {
+          d.blocks.forEach((t, i) => { if (S.blocks[i]) S.blocks[i].b = t; });
+          S.blocks.forEach((b, i) => setTarget(i, b.b));
+          S.noSync = false;
+          markStreaming(-1);
+          updateInfo();
+          const sec = ((performance.now() - started) / 1000).toFixed(1);
+          const miss = d.missing ? '，' + d.missing + ' 块空着' : '';
+          toast('完成 ' + S.blocks.length + ' 块 · ' + sec + 's' + miss);
+        },
+        error: (d) => toast('出错：' + d.message, 4000)
+      },
+      ctrl.signal);
+  } catch (e) {
+    if (e.name !== 'AbortError') toast('出错：' + e.message, 4000);
+  } finally {
+    setBusy(false);
+    markStreaming(-1);
+    saveLocal();
+    refreshStatus();
+  }
+}
+
+function setBusy(v) {
+  S.busy = v;
+  $('#btnGo').disabled = v;
+  $('#btnVision').disabled = v;
+  if ($('#btnGen')) $('#btnGen').disabled = v;
+  $('#btnGo').innerHTML = v ? '<span class="spin"></span> 翻译中' : '翻译 <span class="arr">→</span>';
+  if ($('#btnGen')) $('#btnGen').innerHTML = v ? '<span class="spin"></span> 生成中' : '生成 <span class="arr">→</span>';
+}
+
+/* ------------------------------ 自然语言生成 ------------------------------ */
+async function doGenerate(instruction) {
+  if (S.busy) return;
+  if (!instruction.trim()) { toast('说说你要什么'); return; }
+  if (!S.server || S.server.status !== 'ready') {
+    toast(S.server ? '模型还没就绪：' + (S.server.message || '') : '后端没连上');
+    return;
+  }
+  setBusy(true);
+  const t0 = performance.now();
+  const ctrl = new AbortController();
+  try {
+    await streamSSE('/api/generate', { instruction }, {
+      start: () => {
+        S.nl = true;
+        S.noSync = true;
+        S.blockDir = 'zh2en';
+        S.blocks = [];
+        renderBlocks();
+        $('#statusText').textContent = '生成中…';
+      },
+      line: (d) => {
+        const i = d.n - 1;
+        while (S.blocks.length <= i) S.blocks.push({ a: '', b: '' });
+        S.blocks[i] = { a: d.a || '', b: d.b || '' };
+        const srcEl = document.querySelector('.block[data-i="' + i + '"] .src');
+        if (!srcEl) {
+          renderBlocks();
+          markStreaming(i);
+        } else {
+          if (srcEl && document.activeElement !== srcEl) { srcEl.value = d.a || ''; autoGrow(srcEl); }
+          setTarget(i, d.b || '');
+        }
+        updateInfo();
+      },
+      done: (d) => {
+        S.blocks = (d.blocks || []).map(x => ({ a: x.a || '', b: x.b || '' }));
+        S.noSync = false;
+        renderBlocks();
+        const sec = ((performance.now() - t0) / 1000).toFixed(1);
+        toast('生成 ' + S.blocks.length + ' 对（中英） · ' + sec + 's');
+      },
+      error: (d) => toast('出错：' + d.message, 4000)
+    }, ctrl.signal);
+  } catch (e) {
+    if (e.name !== 'AbortError') toast('出错：' + e.message, 4000);
+  } finally {
+    setBusy(false);
+    markStreaming(-1);
+    saveLocal();
+    refreshStatus();
+  }
+}
+
+/* ------------------------------ 单块重译 / 改原文联动 ------------------------------ */
+// 把块里的原文拼回输入框（文字翻译 → 输入框；图片识图 → 描述框）
+function syncInputFromBlocks() {
+  if (S.noSync) return;
+  const ta = inputEl();
+  if (!ta) return;
+  if (document.activeElement === ta) return;   // 正在这个框里打字，别抢
+  const text = S.blocks.map(b => (b.a || '').trim()).filter(Boolean).join('\n');
+  if (ta.value.trim() === text.trim()) return;
+  ta.value = text;
+  if (ta.id === 'desc') autoGrow(ta);
+  bumpCounter();
+  saveLocal();
+}
+
+// 改译文 → 反译回原文，让输入框跟着变
+const backDone = new WeakMap();
+const backTimers = {};
+
+function scheduleBackSync(i) {
+  clearTimeout(backTimers[i]);
+  backTimers[i] = setTimeout(() => backTranslate(i), 900);
+}
+
+async function backTranslate(i) {
+  const b = S.blocks[i];
+  if (!b) return;
+  const target = (b.b || '').trim();
+  if (!target) return;
+  if (backDone.get(b) === target) return;   // 这个版本已经同步过
+  backDone.set(b, target);
+
+  const el = document.querySelector('.block[data-i="' + i + '"]');
+  if (el) el.classList.add('syncing');
+  try {
+    const r = await fetch('/api/retranslate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        unit: target,
+        full: S.blocks.map(x => (x.b || '').trim()).filter(Boolean).join('\n'),
+        n: i + 1,
+        mode: S.mode === 'phrase' ? 'phrase' : 'sentence',
+        direction: S.blockDir === 'zh2en' ? 'en2zh' : 'zh2en'
+      })
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || '失败');
+    if (j.text && j.text !== b.a) {
+      b.a = j.text;
+      const srcEl = document.querySelector('.block[data-i="' + i + '"] .src');
+      if (srcEl) {
+        if (document.activeElement !== srcEl) { srcEl.value = j.text; autoGrow(srcEl); }
+        srcEl.classList.add('updated');
+        setTimeout(() => srcEl.classList.remove('updated'), 1400);
+      }
+      syncInputFromBlocks();
+      updateInfo();
+      saveLocal();
+      flashBlock(i);
+    }
+  } catch (e) {
+    backDone.delete(b);   // 失败就不记，下次还能重试
+    toast('回写原文失败：' + e.message, 3000);
+  } finally {
+    if (el) el.classList.remove('syncing');
+  }
+}
+
+async function retranslateBlock(i) {
+  const b = S.blocks[i];
+  if (!b) return;
+  if (!b.a.trim()) { toast('这块没有原文'); return; }
+  const el = document.querySelector('.block[data-i="' + i + '"]');
+  if (el) el.classList.add('syncing');
+  try {
+    const r = await fetch('/api/retranslate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        unit: b.a,
+        full: S.blocks.map(x => x.a).filter(Boolean).join('\n'),
+        n: i + 1,
+        mode: S.mode === 'phrase' ? 'phrase' : 'sentence',
+        direction: S.blockDir
+      })
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || '失败');
+    if (j.text) {
+      b.b = j.text;
+      setTarget(i, j.text);
+      updateInfo();
+      saveLocal();
+      flashBlock(i);
+    }
+  } catch (e) {
+    toast('重译失败：' + e.message);
+  } finally {
+    if (el) el.classList.remove('syncing');
+  }
+}
+
+// 改原文 → 停手 1 秒后自动重译这一块
+const syncTimers = {};
+function scheduleSync(i) {
+  clearTimeout(syncTimers[i]);
+  syncTimers[i] = setTimeout(() => {
+    const b = S.blocks[i];
+    if (!b || !b.a.trim()) return;
+    retranslateBlock(i);
+  }, 1000);
+}
+
+/* ------------------------------ 识图 ------------------------------ */
+function downscale(file, maxSide) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      const ctx = c.getContext('2d');
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve({ dataUrl: c.toDataURL('image/jpeg', 0.9), w, h, ow: img.width, oh: img.height });
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('图片读不了')); };
+    img.src = url;
+  });
+}
+
+async function loadImageFile(file) {
+  if (!file || !file.type.startsWith('image/')) { toast('这不是图片'); return; }
+  try {
+    const d = await downscale(file, S.imgSize);
+    S.image = d;
+    const p = $('#preview');
+    p.src = d.dataUrl;
+    p.hidden = false;
+    $('#dropInner').hidden = true;
+    const kb = Math.round(d.dataUrl.length * 0.75 / 1024);
+    $('#imgMeta').textContent = d.ow + '×' + d.oh + ' → ' + d.w + '×' + d.h + ' · ' + kb + 'KB';
+    switchTab('image');
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+async function doVision() {
+  if (S.busy) return;
+  if (!S.image) { toast('先放一张图'); return; }
+  if (!S.server || S.server.status !== 'ready') { toast('模型还没就绪'); return; }
+  setBusy(true);
+  const ctrl = new AbortController();
+  const english = S.imgMode === 'en';
+  const t0 = performance.now();
+  $('#desc').value = '';
+  try {
+    await streamSSE('/api/vision',
+      { image: S.image.dataUrl, english, detail: 220 },
+      {
+        start: () => { $('#statusText').textContent = '识图中…'; },
+        delta: (d) => { $('#desc').value = d.text; autoGrow($('#desc')); },
+        done: (d) => {
+          $('#desc').value = d.text;
+          autoGrow($('#desc'));
+          const sec = ((performance.now() - t0) / 1000).toFixed(1);
+          if (english && d.blocks && d.blocks.length) {
+            S.blockDir = 'zh2en';
+            S.blocks = d.blocks.map(en => ({ a: '', b: en }));
+            renderBlocks();
+            toast('识图完成，出了 ' + d.blocks.length + ' 块 · ' + sec + 's（改英文会反译回描述框）');
+          } else {
+            toast('识图完成 · ' + sec + 's，可以改描述再翻');
+          }
+          saveLocal();
+        },
+        error: (d) => toast('出错：' + d.message, 4000)
+      },
+      ctrl.signal);
+  } catch (e) {
+    if (e.name !== 'AbortError') toast('出错：' + e.message, 4000);
+  } finally {
+    setBusy(false);
+    refreshStatus();
+  }
+}
+
+/* ------------------------------ 词典 ------------------------------ */
+function renderDict() {
+  const g = S.glossary;
+  if (!g) return;
+  const cats = g.categories || [];
+  $('#dictCats').innerHTML = cats.map(c =>
+    '<label class="dcat ' + (c.enabled ? 'on' : '') + '" data-cat="' + c.id + '">' +
+    '<input type="checkbox" ' + (c.enabled ? 'checked' : '') + '><span>' + esc(c.name) + '</span></label>'
+  ).join('');
+
+  const q = ($('#dictSearch').value || '').trim().toLowerCase();
+  const catName = {};
+  cats.forEach(c => { catName[c.id] = c.name; });
+  const groups = {};
+  for (const e of g.entries) {
+    if (q && !(e.zh.toLowerCase().includes(q) || e.en.toLowerCase().includes(q))) continue;
+    (groups[e.cat] = groups[e.cat] || []).push(e);
+  }
+  const parts = [];
+  for (const c of cats) {
+    const list = groups[c.id];
+    if (!list || !list.length) continue;
+    parts.push('<div class="dgroup">' + esc(catName[c.id] || c.id) + ' · ' + list.length + '</div>');
+    for (const e of list) {
+      parts.push('<div class="ditem" data-en="' + esc(e.en) + '">' +
+        '<span class="z">' + esc(e.zh) + '</span>' +
+        '<span class="e">' + esc(e.en) + '</span>' +
+        '<span class="tick">已复制</span></div>');
+    }
+  }
+  $('#dictList').innerHTML = parts.join('') || '<div class="dgroup">没找到</div>';
+  const total = g.entries.length;
+  const on = g.entries.filter(e => {
+    const c = cats.find(x => x.id === e.cat);
+    return c && c.enabled;
+  }).length;
+  $('#dictSub').textContent = on + '/' + total + ' 条启用';
+  $('#dictCount').textContent = on;
+  $('#newCat').innerHTML = cats.map(c => '<option value="' + c.id + '">' + esc(c.name) + '</option>').join('');
+}
+
+async function saveGlossary() {
+  try {
+    await fetch('/api/glossary', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ entries: S.glossary.entries, categories: S.glossary.categories })
+    });
+  } catch (_) { toast('词典保存失败'); }
+}
+
+/* ------------------------------ 自然语言修改 ------------------------------ */
+function chatAdd(role, text) {
+  const d = document.createElement('div');
+  d.className = 'msg ' + role;
+  d.textContent = text;
+  $('#chatlog').appendChild(d);
+  $('#chatlog').scrollTop = $('#chatlog').scrollHeight;
+  return d;
+}
+
+async function sendChat() {
+  const ins = $('#chatInput').value.trim();
+  if (!ins) return;
+  if (!S.server || S.server.status !== 'ready') { toast('模型还没就绪'); return; }
+  if (S.busy) return;
+  if (S.chatMode === 'input') return sendRewriteInput(ins);
+  if (!S.blocks.length) { toast('先翻出几块再改'); return; }
+
+  const btn = $('#btnChatSend');
+  btn.disabled = true;
+  $('#chatInput').value = '';
+  autoGrow($('#chatInput'));
+  chatAdd('me', ins);
+  const pending = chatAdd('ai pending', '正在改…');
+
+  const before = JSON.stringify({ el: activeTab(), text: inputEl().value, blocks: S.blocks });
+  try {
+    const r = await fetch('/api/revise', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        direction: S.blockDir,
+        blocks: S.blocks.map(b => b.b || ''),
+        instruction: ins,
+        history: S.history
+      })
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || '失败');
+
+    S.history.push(ins);
+    if (S.history.length > 12) S.history = S.history.slice(-12);
+
+    pending.classList.remove('pending');
+    if (!j.changes.length) {
+      pending.textContent = j.reply || '没找到要改的地方';
+    } else {
+      S.snapshots.push(before);
+      if (S.snapshots.length > 20) S.snapshots.shift();
+      const flashed = [];
+      for (const c of j.changes) {
+        if (c.n >= 1 && c.n <= S.blocks.length) {
+          S.blocks[c.n - 1].b = c.text;
+          flashed.push(c.n - 1);
+        } else if (c.n === S.blocks.length + 1) {
+          S.blocks.push({ a: '', b: c.text });
+          flashed.push(S.blocks.length - 1);
+        }
+      }
+      renderBlocks();
+      flashed.forEach(flashBlock);
+      updateInfo();
+      saveLocal();
+      flashed.forEach(i => backTranslate(i));   // 改过的块反译回原文，让输入框跟上
+      pending.textContent = (j.reply || '改好了') + '\n（改了 ' + flashed.length + ' 块，' + (j.ms / 1000).toFixed(1) + 's）';
+    }
+  } catch (e) {
+    pending.classList.remove('pending');
+    pending.textContent = '出错：' + e.message;
+  } finally {
+    btn.disabled = false;
+    $('#chatInput').focus();
+  }
+}
+
+function undoRevise() {
+  if (!S.snapshots.length) { toast('没有可撤销的修改'); return; }
+  const prev = S.snapshots.pop();
+  try {
+    const d = JSON.parse(prev);
+    if (Array.isArray(d)) {
+      S.blocks = d;                                  // 旧格式（只有块）
+    } else {
+      if (typeof d.text === 'string') {
+        if (d.el === 'image') switchTab('image'); else switchTab('text');
+        const ta = inputEl();
+        ta.value = d.text;
+        if (activeTab() === 'image') autoGrow($('#desc'));
+      }
+      S.blocks = d.blocks || [];
+    }
+    bumpCounter();
+    renderBlocks();
+    saveLocal();
+    chatAdd('sys', '已撤销上一次修改');
+    toast('已撤销');
+  } catch (_) { toast('撤销失败'); }
+}
+
+/* 自然语言改写「左边输入」，改完自动重翻（识图模式下改的是描述框） */
+async function sendRewriteInput(ins) {
+  const ta = inputEl();
+  const source = ta.value.trim();
+  if (!source) { toast(activeTab() === 'image' ? '左边的识图描述还是空的' : '左边输入还是空的'); return; }
+
+  const btn = $('#btnChatSend');
+  btn.disabled = true;
+  $('#chatInput').value = '';
+  autoGrow($('#chatInput'));
+  chatAdd('me', ins);
+  const pending = chatAdd('ai pending', '正在改写输入…');
+
+  const before = JSON.stringify({ el: activeTab(), text: ta.value, blocks: S.blocks });
+  try {
+    const r = await fetch('/api/rewrite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: source, instruction: ins, direction: S.dir })
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || '失败');
+
+    S.snapshots.push(before);
+    if (S.snapshots.length > 20) S.snapshots.shift();
+
+    ta.value = j.text;
+    if (activeTab() === 'image') autoGrow($('#desc'));
+    bumpCounter();
+    saveLocal();
+
+    pending.classList.remove('pending');
+    pending.textContent = '输入已改写（' + source.length + ' → ' + j.text.length + ' 字），重新翻译中…';
+
+    await doTranslate(j.text, S.mode, S.dir);
+    pending.textContent = '输入已改写（' + source.length + ' → ' + j.text.length + ' 字），已重新翻成 ' + S.blocks.length + ' 块';
+  } catch (e) {
+    pending.classList.remove('pending');
+    pending.textContent = '出错：' + e.message;
+  } finally {
+    btn.disabled = false;
+    $('#chatInput').focus();
+  }
+}
+
+/* ------------------------------ 服务状态 ------------------------------ */
+async function refreshStatus() {
+  let st;
+  try {
+    const r = await fetch('/api/state', { cache: 'no-store' });
+    st = await r.json();
+  } catch (_) {
+    $('#dot').className = 'dot error';
+    $('#statusText').textContent = '后端没连上';
+    return;
+  }
+  S.server = st;
+  const dot = $('#dot');
+  dot.className = 'dot ' + (st.status === 'ready' ? 'ready' : st.status === 'loading' ? 'loading' : st.status === 'error' ? 'error' : 'loading');
+  if (st.status === 'ready') {
+    const name = st.modelName || st.modelAlias || '';
+    $('#statusText').textContent = name + (st.attached ? ' · 外部' : '') + (st.vision ? ' · 可识图' : ' · 纯文本');
+  } else {
+    $('#statusText').textContent = st.message || st.status;
+  }
+  $('#status').title = (st.message || '') + (st.hint ? '\n' + st.hint : '');
+
+  const sel = $('#modelSel');
+  if (sel.options.length !== st.models.length) {
+    sel.innerHTML = st.models.map(m => '<option value="' + m.id + '">' + esc(m.name) + '</option>').join('');
+  }
+  if (!S.busy && st.modelId && sel.value !== st.modelId) {
+    const opt = Array.from(sel.options).find(o => o.value === st.modelId);
+    if (opt) sel.value = st.modelId;
+  }
+  sel.disabled = !!st.attached || st.status === 'loading';
+  $('#btnVision').title = st.vision ? '' : '当前模型没有加载视觉模块';
+}
+
+/* ------------------------------ 切模型 ------------------------------ */
+async function switchModel(id) {
+  if (!id) return;
+  toast('正在切换模型…', 3000);
+  try {
+    const r = await fetch('/api/model', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    });
+    if (!r.ok) {
+      const j = await r.json();
+      toast(j.error || '切换失败', 3000);
+      refreshStatus();
+    }
+  } catch (e) {
+    toast('切换失败：' + e.message);
+  }
+}
+
+/* ------------------------------ 交互 ------------------------------ */
+function switchTab(name) {
+  $$('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  $$('.tabbody').forEach(b => { b.hidden = b.dataset.pane !== name; });
+  S.tab = name;
+  // 自然语言页签里的框是「指令」，不是内容，不参与「改输入」
+  const inBtn = document.querySelector('#chatMode button[data-m="input"]');
+  if (inBtn) {
+    const dis = name === 'nl';
+    inBtn.disabled = dis;
+    inBtn.title = dis ? '自然语言页签的框是指令，改块就好' : '';
+    if (dis && S.chatMode === 'input') {
+      const bb = document.querySelector('#chatMode button[data-m="blocks"]');
+      if (bb) bb.click();
+    }
+  }
+  updateSyncBtn();
+  saveLocal();
+}
+
+function updatePlaceholders() {
+  const t = $('#zh');
+  if (S.dir === 'en2zh') {
+    t.placeholder = 'English 粘进来，比如：\na girl in a red dress standing on a stone bridge at dawn, cyberpunk color grading, cinematic lighting.';
+  } else {
+    t.placeholder = '中文粘进来就行，比如：\n清晨的雾气漫过山谷，一个穿红裙的女孩站在石桥上，远处有座废弃的灯塔。赛博朋克色调，电影级打光。';
+  }
+}
+
+function setDir(dir, silent) {
+  if (dir === S.dir) return true;
+  if (S.blocks.length && !silent && !confirm('切换翻译方向会清空当前这些块，继续？')) {
+    $$('#dir button').forEach(b => b.classList.toggle('on', b.dataset.d === S.dir));
+    return false;
+  }
+  S.dir = dir;
+  S.blockDir = dir;
+  S.blocks = [];
+  S.snapshots = [];
+  $$('#dir button').forEach(b => b.classList.toggle('on', b.dataset.d === dir));
+  updatePlaceholders();
+  renderBlocks();
+  saveLocal();
+  return true;
+}
+
+function bind() {
+  $$('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
+
+  $('#zh').addEventListener('input', () => {
+    $('#zhCount').textContent = $('#zh').value.length + ' 字';
+    saveLocal();
+  });
+  $('#zh').addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); doTranslate($('#zh').value, undefined, undefined, 'zh'); }
+  });
+  $('#btnGo').addEventListener('click', () => doTranslate($('#zh').value, undefined, undefined, 'zh'));
+
+  $('#btnGen').addEventListener('click', () => doGenerate($('#nl').value));
+  $('#nl').addEventListener('input', () => {
+    $('#nlCount').textContent = $('#nl').value.length + ' 字';
+    saveLocal();
+  });
+  $('#nl').addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); doGenerate($('#nl').value); }
+  });
+
+  $('#btnSyncIn').addEventListener('click', () => {
+    if (!S.blocks.length) return toast('还没有块');
+    syncInputFromBlocks();
+    updateSyncBtn();
+    toast('已把块里的原文同步到输入框');
+  });
+
+  $$('#dir button').forEach(b => b.addEventListener('click', () => setDir(b.dataset.d)));
+  $$('#gran button').forEach(b => b.addEventListener('click', () => {
+    $$('#gran button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    S.mode = b.dataset.g;
+    saveLocal();
+  }));
+
+  // 图片
+  $('#drop').addEventListener('click', () => $('#file').click());
+  $('#file').addEventListener('change', e => { if (e.target.files[0]) loadImageFile(e.target.files[0]); e.target.value = ''; });
+  ['dragenter', 'dragover'].forEach(ev => $('#drop').addEventListener(ev, e => { e.preventDefault(); $('#drop').classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => $('#drop').addEventListener(ev, e => { e.preventDefault(); $('#drop').classList.remove('over'); }));
+  $('#drop').addEventListener('drop', e => {
+    const f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) loadImageFile(f);
+  });
+  document.addEventListener('paste', e => {
+    const items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    for (const it of items) {
+      if (it.type.indexOf('image/') === 0) {
+        const f = it.getAsFile();
+        if (f) { e.preventDefault(); loadImageFile(f); }
+        break;
+      }
+    }
+  });
+
+  $$('#imgSize button').forEach(b => b.addEventListener('click', () => {
+    $$('#imgSize button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    S.imgSize = parseInt(b.dataset.s, 10);
+    saveLocal();
+    if (S.image) toast('尺寸改了，重新拖一次图');
+  }));
+  $$('#imgMode button').forEach(b => b.addEventListener('click', () => {
+    $$('#imgMode button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    S.imgMode = b.dataset.m;
+    saveLocal();
+  }));
+  $('#btnVision').addEventListener('click', doVision);
+  $('#desc').addEventListener('input', () => { autoGrow($('#desc')); saveLocal(); });
+  $('#btnDescTranslate').addEventListener('click', () => doTranslate($('#desc').value, 'phrase', 'zh2en', 'desc'));
+
+  // 块区：改原文 / 改译文
+  $('#blocks').addEventListener('focusout', (e) => {
+    const ta = e.target;
+    if (!ta.classList || !ta.classList.contains('tgt')) return;
+    const blockEl = ta.closest('.block');
+    if (!blockEl) return;
+    const i = +blockEl.dataset.i;
+    clearTimeout(backTimers[i]);
+    // 光标离开就立刻回写，不用等防抖
+    setTimeout(() => backTranslate(i), 120);
+  });
+
+  $('#blocks').addEventListener('input', (e) => {
+    const ta = e.target;
+    const blockEl = ta.closest('.block');
+    if (!blockEl) return;
+    const i = +blockEl.dataset.i;
+    if (!S.blocks[i]) return;
+    if (ta.classList.contains('src')) {
+      S.blocks[i].a = ta.value;
+      autoGrow(ta);
+      updateInfo();
+      syncInputFromBlocks();
+      scheduleSync(i);
+    } else if (ta.classList.contains('tgt')) {
+      S.blocks[i].b = ta.value;
+      autoGrow(ta);
+      updateInfo();
+      scheduleBackSync(i);
+    }
+    saveLocal();
+  });
+
+  $('#blocks').addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-act]');
+    if (!btn) return;
+    const blockEl = btn.closest('.block');
+    const i = +blockEl.dataset.i;
+    const act = btn.dataset.act;
+    if (act === 'copy') {
+      await copyText(S.blocks[i].b || '');
+      toast('这块已复制');
+    } else if (act === 'del') {
+      S.blocks.splice(i, 1);
+      renderBlocks();
+      syncInputFromBlocks();
+      saveLocal();
+    } else if (act === 'up' && i > 0) {
+      const t = S.blocks[i - 1];
+      S.blocks[i - 1] = S.blocks[i];
+      S.blocks[i] = t;
+      renderBlocks();
+      syncInputFromBlocks();
+      saveLocal();
+    } else if (act === 'down' && i < S.blocks.length - 1) {
+      const t = S.blocks[i + 1];
+      S.blocks[i + 1] = S.blocks[i];
+      S.blocks[i] = t;
+      renderBlocks();
+      syncInputFromBlocks();
+      saveLocal();
+    } else if (act === 're') {
+      retranslateBlock(i);
+    }
+  });
+
+  $('#btnCopyAll').addEventListener('click', async () => {
+    const t = S.blocks.map(b => (b.b || '').trim().replace(/[,，.。;；]$/, '')).filter(Boolean).join('\n');
+    if (!t) return toast('没有内容');
+    await copyText(t);
+    toast('全部复制（换行分隔）');
+  });
+  $('#btnCopyJoin').addEventListener('click', async () => {
+    const t = S.blocks.map(b => (b.b || '').trim().replace(/[,，.。;；]$/, '')).filter(Boolean).join(', ');
+    if (!t) return toast('没有内容');
+    await copyText(t);
+    toast('全部复制（逗号串）');
+  });
+  $('#btnAdd').addEventListener('click', () => {
+    S.blocks.push({ a: '', b: '' });
+    renderBlocks();
+    const last = document.querySelector('.block[data-i="' + (S.blocks.length - 1) + '"] .src');
+    if (last) last.focus();
+    saveLocal();
+  });
+  $('#btnClear').addEventListener('click', () => {
+    if (S.blocks.length && !confirm('清空所有块？')) return;
+    S.blocks = [];
+    S.snapshots = [];
+    renderBlocks();
+    saveLocal();
+  });
+
+  // 自然语言修改（常驻左栏下半）
+  $('#btnChatSend').addEventListener('click', sendChat);
+  $('#btnUndo').addEventListener('click', undoRevise);
+  $$('#chatMode button').forEach(b => b.addEventListener('click', () => {
+    $$('#chatMode button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    S.chatMode = b.dataset.m;
+    $('#chatInput').placeholder = S.chatMode === 'input'
+      ? '说要把上面那段输入改成什么（也可以说「扩写得更详细」）'
+      : '说要改哪一块提示词';
+    $('#chatInput').focus();
+  }));
+  $('#chatInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+  });
+  $('#chatInput').addEventListener('input', () => autoGrow($('#chatInput')));
+
+  // 词典
+  $('#btnDict').addEventListener('click', () => { $('#drawer').hidden = false; renderDict(); });
+  $('#btnCloseDrawer').addEventListener('click', () => { $('#drawer').hidden = true; });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { $('#drawer').hidden = true; }
+  });
+  $('#dictSearch').addEventListener('input', renderDict);
+  $('#dictAll').addEventListener('change', (e) => {
+    const all = e.target.checked;
+    S.glossary.categories.forEach(c => { c.enabled = all; });
+    renderDict();
+    saveGlossary();
+  });
+  $('#dictCats').addEventListener('change', (e) => {
+    const lab = e.target.closest('.dcat');
+    if (!lab) return;
+    const c = S.glossary.categories.find(x => x.id === lab.dataset.cat);
+    if (c) c.enabled = e.target.checked;
+    renderDict();
+    saveGlossary();
+  });
+  $('#dictList').addEventListener('click', async (e) => {
+    const it = e.target.closest('.ditem');
+    if (!it) return;
+    await copyText(it.dataset.en);
+    it.classList.add('copied');
+    setTimeout(() => it.classList.remove('copied'), 1200);
+    toast('已复制：' + it.dataset.en);
+  });
+  $('#btnAddTerm').addEventListener('click', async () => {
+    const zh = $('#newZh').value.trim();
+    const en = $('#newEn').value.trim();
+    if (!zh || !en) return toast('中文和英文都要填');
+    if (S.glossary.entries.some(e => e.zh === zh)) return toast('这条已经有了');
+    S.glossary.entries.push({ zh: zh, en: en, cat: $('#newCat').value });
+    $('#newZh').value = '';
+    $('#newEn').value = '';
+    renderDict();
+    await saveGlossary();
+    toast('已加入词典');
+  });
+
+  $('#modelSel').addEventListener('change', (e) => switchModel(e.target.value));
+
+  // 输出区：复制 / 拖动高度 / 收起
+  $('#btnCopyZhOut').addEventListener('click', async () => {
+    const t = $('#outZh').value.trim();
+    if (!t) return toast('中文还没内容');
+    await copyText(t);
+    toast('中文已复制（' + t.split('\n').length + ' 段）');
+  });
+  $('#btnCopyEnOut').addEventListener('click', async () => {
+    const t = $('#outEn').value.trim();
+    if (!t) return toast('英文还没内容');
+    await copyText(t);
+    toast('英文已复制（' + t.split('\n').length + ' 段）');
+  });
+  $('#btnToggleOut').addEventListener('click', () => toggleOutput());
+  (function initGrip() {
+    const grip = $('#outGrip'), out = $('#output');    let dragging = false, startY = 0, startH = 0;
+    grip.addEventListener('mousedown', (e) => {
+      if (out.classList.contains('collapsed')) return;
+      dragging = true; startY = e.clientY; startH = out.offsetHeight;
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      const h = Math.max(120, Math.min(window.innerHeight * 0.75, startH + (startY - e.clientY)));
+      out.style.height = h + 'px';
+    });
+    document.addEventListener('mouseup', () => {
+      if (!dragging) return;
+      dragging = false;
+      document.body.style.userSelect = '';
+      saveLocal();
+    });
+  })();
+
+  // 左栏上下分栏拖拽
+  (function initLeftGrip() {
+    const grip = $('#leftGrip'), box = $('#chat'), pane = document.querySelector('.pane.left');
+    if (!grip || !box || !pane) return;
+    let dragging = false, startY = 0, startH = 0;
+    grip.addEventListener('mousedown', (e) => {
+      dragging = true; startY = e.clientY; startH = box.offsetHeight;
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      chatH = clampChatH(startH + (startY - e.clientY), pane);
+      box.style.flex = '0 0 ' + chatH + 'px';
+    });
+    document.addEventListener('mouseup', () => {
+      if (!dragging) return;
+      dragging = false;
+      document.body.style.userSelect = '';
+      saveLocal();
+    });
+    grip.addEventListener('dblclick', () => {
+      chatH = 0;
+      box.style.flex = '';
+      saveLocal();
+      toast('已恢复默认比例');
+    });
+  })();
+
+  $('#btnRestart').addEventListener('click', async () => {
+    if (!confirm('重启本地 llama-server？（要重新加载模型，约 20–60 秒）')) return;
+    try {
+      await fetch('/api/restart', { method: 'POST' });
+      toast('正在重启，稍等…', 3000);
+      setTimeout(refreshStatus, 800);
+    } catch (e) { toast('重启失败：' + e.message); }
+  });
+}
+
+// 左栏上下分栏：上面至少留够这一栏内容需要的高度，聊天区最矮 110px
+function clampChatH(h, pane) {
+  const need = activeTab() === 'image' ? 480 : 320;
+  const max = Math.max(150, pane.clientHeight - need);
+  return Math.max(110, Math.min(max, h));
+}
+
+function applyChatH() {
+  const box = $('#chat'), pane = document.querySelector('.pane.left');
+  if (!box || !pane) return;
+  if (!chatH) { box.style.flex = ''; return; }
+  chatH = clampChatH(chatH, pane);
+  box.style.flex = '0 0 ' + chatH + 'px';
+}
+
+/* ------------------------------ 启动 ------------------------------ */
+async function boot() {
+  bind();
+  restoreLocal();
+  applyChatH();
+  $('#zhCount').textContent = $('#zh').value.length + ' 字';
+  $$('#gran button').forEach(b => b.classList.toggle('on', b.dataset.g === S.mode));
+  $$('#dir button').forEach(b => b.classList.toggle('on', b.dataset.d === S.dir));
+  updatePlaceholders();
+  $$('#imgSize button').forEach(b => b.classList.toggle('on', +b.dataset.s === S.imgSize));
+  $$('#imgMode button').forEach(b => b.classList.toggle('on', b.dataset.m === S.imgMode));
+
+  try {
+    const g = await (await fetch('/api/glossary')).json();
+    S.glossary = g;
+    const on = g.entries.filter(e => {
+      const c = g.categories.find(x => x.id === e.cat);
+      return c && c.enabled;
+    }).length;
+    $('#dictCount').textContent = on;
+  } catch (_) { S.glossary = { categories: [], entries: [] }; }
+
+  renderBlocks();
+  setTimeout(() => { autoGrow($('#desc')); autoGrow($('#chatInput')); }, 50);
+  refreshStatus();
+  setInterval(refreshStatus, 2500);
+}
+
+boot();

@@ -1,0 +1,957 @@
+{
+  "version": 1,
+  "categories": [
+    {
+      "id": "quality",
+      "name": "画质 / 质感",
+      "enabled": true
+    },
+    {
+      "id": "style",
+      "name": "风格 / 画派",
+      "enabled": true
+    },
+    {
+      "id": "camera",
+      "name": "镜头 / 光线 / 构图",
+      "enabled": true
+    },
+    {
+      "id": "character",
+      "name": "人物 / 服饰",
+      "enabled": true
+    },
+    {
+      "id": "scene",
+      "name": "场景 / 环境",
+      "enabled": true
+    },
+    {
+      "id": "material",
+      "name": "材质 / 特效",
+      "enabled": true
+    },
+    {
+      "id": "mood",
+      "name": "氛围 / 情绪",
+      "enabled": true
+    },
+    {
+      "id": "format",
+      "name": "画幅 / 用途",
+      "enabled": true
+    }
+  ],
+  "entries": [
+    {
+      "zh": "杰作",
+      "en": "masterpiece",
+      "cat": "quality"
+    },
+    {
+      "zh": "最佳质量",
+      "en": "best quality",
+      "cat": "quality"
+    },
+    {
+      "zh": "超高清",
+      "en": "ultra high definition",
+      "cat": "quality"
+    },
+    {
+      "zh": "高清",
+      "en": "high definition",
+      "cat": "quality"
+    },
+    {
+      "zh": "高分辨率",
+      "en": "high resolution",
+      "cat": "quality"
+    },
+    {
+      "zh": "4K",
+      "en": "4K resolution",
+      "cat": "quality"
+    },
+    {
+      "zh": "8K",
+      "en": "8K resolution",
+      "cat": "quality"
+    },
+    {
+      "zh": "超精细",
+      "en": "ultra-detailed",
+      "cat": "quality"
+    },
+    {
+      "zh": "精细细节",
+      "en": "intricate details",
+      "cat": "quality"
+    },
+    {
+      "zh": "锐利对焦",
+      "en": "sharp focus",
+      "cat": "quality"
+    },
+    {
+      "zh": "照片级写实",
+      "en": "photorealistic",
+      "cat": "quality"
+    },
+    {
+      "zh": "写实摄影",
+      "en": "realistic photography",
+      "cat": "quality"
+    },
+    {
+      "zh": "电影感",
+      "en": "cinematic look",
+      "cat": "quality"
+    },
+    {
+      "zh": "HDR",
+      "en": "HDR",
+      "cat": "quality"
+    },
+    {
+      "zh": "赛博朋克",
+      "en": "cyberpunk",
+      "cat": "style"
+    },
+    {
+      "zh": "蒸汽朋克",
+      "en": "steampunk",
+      "cat": "style"
+    },
+    {
+      "zh": "柴油朋克",
+      "en": "dieselpunk",
+      "cat": "style"
+    },
+    {
+      "zh": "复古未来主义",
+      "en": "retrofuturism",
+      "cat": "style"
+    },
+    {
+      "zh": "二次元",
+      "en": "anime style",
+      "cat": "style"
+    },
+    {
+      "zh": "日系",
+      "en": "Japanese anime style",
+      "cat": "style"
+    },
+    {
+      "zh": "国风",
+      "en": "Chinese style",
+      "cat": "style"
+    },
+    {
+      "zh": "古风",
+      "en": "ancient Chinese style",
+      "cat": "style"
+    },
+    {
+      "zh": "水墨",
+      "en": "ink wash painting",
+      "cat": "style"
+    },
+    {
+      "zh": "工笔画",
+      "en": "gongbi painting",
+      "cat": "style"
+    },
+    {
+      "zh": "油画",
+      "en": "oil painting",
+      "cat": "style"
+    },
+    {
+      "zh": "丙烯画",
+      "en": "acrylic painting",
+      "cat": "style"
+    },
+    {
+      "zh": "水彩",
+      "en": "watercolor painting",
+      "cat": "style"
+    },
+    {
+      "zh": "厚涂",
+      "en": "impasto painting",
+      "cat": "style"
+    },
+    {
+      "zh": "素描",
+      "en": "pencil sketch",
+      "cat": "style"
+    },
+    {
+      "zh": "线稿",
+      "en": "line art",
+      "cat": "style"
+    },
+    {
+      "zh": "像素风",
+      "en": "pixel art",
+      "cat": "style"
+    },
+    {
+      "zh": "低多边形",
+      "en": "low poly",
+      "cat": "style"
+    },
+    {
+      "zh": "3D渲染",
+      "en": "3D render",
+      "cat": "style"
+    },
+    {
+      "zh": "黏土",
+      "en": "claymation style",
+      "cat": "style"
+    },
+    {
+      "zh": "剪纸",
+      "en": "papercut art",
+      "cat": "style"
+    },
+    {
+      "zh": "浮世绘",
+      "en": "ukiyo-e",
+      "cat": "style"
+    },
+    {
+      "zh": "巴洛克",
+      "en": "baroque",
+      "cat": "style"
+    },
+    {
+      "zh": "洛可可",
+      "en": "rococo",
+      "cat": "style"
+    },
+    {
+      "zh": "印象派",
+      "en": "impressionism",
+      "cat": "style"
+    },
+    {
+      "zh": "超现实主义",
+      "en": "surrealism",
+      "cat": "style"
+    },
+    {
+      "zh": "极简主义",
+      "en": "minimalism",
+      "cat": "style"
+    },
+    {
+      "zh": "新艺术运动",
+      "en": "art nouveau",
+      "cat": "style"
+    },
+    {
+      "zh": "吉卜力风格",
+      "en": "Studio Ghibli style",
+      "cat": "style"
+    },
+    {
+      "zh": "迪士尼风格",
+      "en": "Disney style",
+      "cat": "style"
+    },
+    {
+      "zh": "皮克斯风格",
+      "en": "Pixar style",
+      "cat": "style"
+    },
+    {
+      "zh": "概念艺术",
+      "en": "concept art",
+      "cat": "style"
+    },
+    {
+      "zh": "奇幻插画",
+      "en": "fantasy illustration",
+      "cat": "style"
+    },
+    {
+      "zh": "暗黑奇幻",
+      "en": "dark fantasy",
+      "cat": "style"
+    },
+    {
+      "zh": "赛璐璐",
+      "en": "cel shading",
+      "cat": "style"
+    },
+    {
+      "zh": "厚涂插画",
+      "en": "painterly illustration",
+      "cat": "style"
+    },
+    {
+      "zh": "科幻",
+      "en": "sci-fi",
+      "cat": "style"
+    },
+    {
+      "zh": "蒸汽波",
+      "en": "vaporwave",
+      "cat": "style"
+    },
+    {
+      "zh": "手绘",
+      "en": "hand-drawn",
+      "cat": "style"
+    },
+    {
+      "zh": "广角镜头",
+      "en": "wide-angle lens",
+      "cat": "camera"
+    },
+    {
+      "zh": "长焦镜头",
+      "en": "telephoto lens",
+      "cat": "camera"
+    },
+    {
+      "zh": "微距",
+      "en": "macro shot",
+      "cat": "camera"
+    },
+    {
+      "zh": "鱼眼镜头",
+      "en": "fisheye lens",
+      "cat": "camera"
+    },
+    {
+      "zh": "浅景深",
+      "en": "shallow depth of field",
+      "cat": "camera"
+    },
+    {
+      "zh": "背景虚化",
+      "en": "bokeh",
+      "cat": "camera"
+    },
+    {
+      "zh": "逆光",
+      "en": "backlighting",
+      "cat": "camera"
+    },
+    {
+      "zh": "侧光",
+      "en": "side lighting",
+      "cat": "camera"
+    },
+    {
+      "zh": "柔光",
+      "en": "soft light",
+      "cat": "camera"
+    },
+    {
+      "zh": "硬光",
+      "en": "hard light",
+      "cat": "camera"
+    },
+    {
+      "zh": "轮廓光",
+      "en": "rim light",
+      "cat": "camera"
+    },
+    {
+      "zh": "伦勃朗光",
+      "en": "Rembrandt lighting",
+      "cat": "camera"
+    },
+    {
+      "zh": "顶光",
+      "en": "top lighting",
+      "cat": "camera"
+    },
+    {
+      "zh": "底光",
+      "en": "bottom lighting",
+      "cat": "camera"
+    },
+    {
+      "zh": "霓虹灯光",
+      "en": "neon lighting",
+      "cat": "camera"
+    },
+    {
+      "zh": "体积光",
+      "en": "volumetric lighting",
+      "cat": "camera"
+    },
+    {
+      "zh": "电影级打光",
+      "en": "cinematic lighting",
+      "cat": "camera"
+    },
+    {
+      "zh": "高对比度",
+      "en": "high contrast",
+      "cat": "camera"
+    },
+    {
+      "zh": "低角度仰拍",
+      "en": "low angle shot",
+      "cat": "camera"
+    },
+    {
+      "zh": "俯拍",
+      "en": "high angle shot",
+      "cat": "camera"
+    },
+    {
+      "zh": "平视",
+      "en": "eye-level shot",
+      "cat": "camera"
+    },
+    {
+      "zh": "特写",
+      "en": "close-up",
+      "cat": "camera"
+    },
+    {
+      "zh": "面部特写",
+      "en": "face close-up",
+      "cat": "camera"
+    },
+    {
+      "zh": "全身像",
+      "en": "full body shot",
+      "cat": "camera"
+    },
+    {
+      "zh": "半身像",
+      "en": "half body shot",
+      "cat": "camera"
+    },
+    {
+      "zh": "人像",
+      "en": "portrait",
+      "cat": "camera"
+    },
+    {
+      "zh": "全景",
+      "en": "wide shot",
+      "cat": "camera"
+    },
+    {
+      "zh": "三分法构图",
+      "en": "rule of thirds composition",
+      "cat": "camera"
+    },
+    {
+      "zh": "对称构图",
+      "en": "symmetrical composition",
+      "cat": "camera"
+    },
+    {
+      "zh": "中心构图",
+      "en": "centered composition",
+      "cat": "camera"
+    },
+    {
+      "zh": "引导线",
+      "en": "leading lines",
+      "cat": "camera"
+    },
+    {
+      "zh": "黄金分割",
+      "en": "golden ratio composition",
+      "cat": "camera"
+    },
+    {
+      "zh": "洛丽塔",
+      "en": "lolita fashion",
+      "cat": "character"
+    },
+    {
+      "zh": "哥特洛丽塔",
+      "en": "gothic lolita",
+      "cat": "character"
+    },
+    {
+      "zh": "汉服",
+      "en": "hanfu",
+      "cat": "character"
+    },
+    {
+      "zh": "和服",
+      "en": "kimono",
+      "cat": "character"
+    },
+    {
+      "zh": "旗袍",
+      "en": "qipao",
+      "cat": "character"
+    },
+    {
+      "zh": "女仆装",
+      "en": "maid outfit",
+      "cat": "character"
+    },
+    {
+      "zh": "水手服",
+      "en": "sailor uniform",
+      "cat": "character"
+    },
+    {
+      "zh": "制服",
+      "en": "school uniform",
+      "cat": "character"
+    },
+    {
+      "zh": "盔甲",
+      "en": "armor",
+      "cat": "character"
+    },
+    {
+      "zh": "骑士",
+      "en": "knight",
+      "cat": "character"
+    },
+    {
+      "zh": "斗篷",
+      "en": "cloak",
+      "cat": "character"
+    },
+    {
+      "zh": "长裙",
+      "en": "long dress",
+      "cat": "character"
+    },
+    {
+      "zh": "高跟鞋",
+      "en": "high heels",
+      "cat": "character"
+    },
+    {
+      "zh": "面纱",
+      "en": "veil",
+      "cat": "character"
+    },
+    {
+      "zh": "赛博义体",
+      "en": "cybernetic implants",
+      "cat": "character"
+    },
+    {
+      "zh": "机械臂",
+      "en": "mechanical arm",
+      "cat": "character"
+    },
+    {
+      "zh": "精灵耳",
+      "en": "elf ears",
+      "cat": "character"
+    },
+    {
+      "zh": "兽耳",
+      "en": "animal ears",
+      "cat": "character"
+    },
+    {
+      "zh": "猫耳",
+      "en": "cat ears",
+      "cat": "character"
+    },
+    {
+      "zh": "天使翅膀",
+      "en": "angel wings",
+      "cat": "character"
+    },
+    {
+      "zh": "长发",
+      "en": "long hair",
+      "cat": "character"
+    },
+    {
+      "zh": "短发",
+      "en": "short hair",
+      "cat": "character"
+    },
+    {
+      "zh": "双马尾",
+      "en": "twin tails",
+      "cat": "character"
+    },
+    {
+      "zh": "单马尾",
+      "en": "ponytail",
+      "cat": "character"
+    },
+    {
+      "zh": "银发",
+      "en": "silver hair",
+      "cat": "character"
+    },
+    {
+      "zh": "白发",
+      "en": "white hair",
+      "cat": "character"
+    },
+    {
+      "zh": "赤瞳",
+      "en": "red eyes",
+      "cat": "character"
+    },
+    {
+      "zh": "异色瞳",
+      "en": "heterochromia",
+      "cat": "character"
+    },
+    {
+      "zh": "纹身",
+      "en": "tattoo",
+      "cat": "character"
+    },
+    {
+      "zh": "疤痕",
+      "en": "scar",
+      "cat": "character"
+    },
+    {
+      "zh": "雀斑",
+      "en": "freckles",
+      "cat": "character"
+    },
+    {
+      "zh": "赛博武士",
+      "en": "cyber samurai",
+      "cat": "character"
+    },
+    {
+      "zh": "废墟",
+      "en": "ruins",
+      "cat": "scene"
+    },
+    {
+      "zh": "赛博都市",
+      "en": "cyberpunk city",
+      "cat": "scene"
+    },
+    {
+      "zh": "霓虹街景",
+      "en": "neon-lit street",
+      "cat": "scene"
+    },
+    {
+      "zh": "雨夜",
+      "en": "rainy night",
+      "cat": "scene"
+    },
+    {
+      "zh": "日落",
+      "en": "sunset",
+      "cat": "scene"
+    },
+    {
+      "zh": "日出",
+      "en": "sunrise",
+      "cat": "scene"
+    },
+    {
+      "zh": "晨雾",
+      "en": "morning mist",
+      "cat": "scene"
+    },
+    {
+      "zh": "星空",
+      "en": "starry sky",
+      "cat": "scene"
+    },
+    {
+      "zh": "银河",
+      "en": "milky way",
+      "cat": "scene"
+    },
+    {
+      "zh": "极光",
+      "en": "aurora",
+      "cat": "scene"
+    },
+    {
+      "zh": "森林",
+      "en": "forest",
+      "cat": "scene"
+    },
+    {
+      "zh": "沙漠",
+      "en": "desert",
+      "cat": "scene"
+    },
+    {
+      "zh": "雪原",
+      "en": "snowfield",
+      "cat": "scene"
+    },
+    {
+      "zh": "花海",
+      "en": "flower field",
+      "cat": "scene"
+    },
+    {
+      "zh": "太空",
+      "en": "outer space",
+      "cat": "scene"
+    },
+    {
+      "zh": "海底",
+      "en": "underwater",
+      "cat": "scene"
+    },
+    {
+      "zh": "教堂",
+      "en": "cathedral",
+      "cat": "scene"
+    },
+    {
+      "zh": "图书馆",
+      "en": "library",
+      "cat": "scene"
+    },
+    {
+      "zh": "古堡",
+      "en": "old castle",
+      "cat": "scene"
+    },
+    {
+      "zh": "神社",
+      "en": "shinto shrine",
+      "cat": "scene"
+    },
+    {
+      "zh": "灯塔",
+      "en": "lighthouse",
+      "cat": "scene"
+    },
+    {
+      "zh": "石桥",
+      "en": "stone bridge",
+      "cat": "scene"
+    },
+    {
+      "zh": "山谷",
+      "en": "valley",
+      "cat": "scene"
+    },
+    {
+      "zh": "迷宫",
+      "en": "labyrinth",
+      "cat": "scene"
+    },
+    {
+      "zh": "未来实验室",
+      "en": "futuristic laboratory",
+      "cat": "scene"
+    },
+    {
+      "zh": "咖啡店",
+      "en": "cafe",
+      "cat": "scene"
+    },
+    {
+      "zh": "天台",
+      "en": "rooftop",
+      "cat": "scene"
+    },
+    {
+      "zh": "废弃工厂",
+      "en": "abandoned factory",
+      "cat": "scene"
+    },
+    {
+      "zh": "金属质感",
+      "en": "metallic texture",
+      "cat": "material"
+    },
+    {
+      "zh": "反光",
+      "en": "reflective surface",
+      "cat": "material"
+    },
+    {
+      "zh": "半透明",
+      "en": "translucent",
+      "cat": "material"
+    },
+    {
+      "zh": "磨砂",
+      "en": "frosted texture",
+      "cat": "material"
+    },
+    {
+      "zh": "丝绸",
+      "en": "silk",
+      "cat": "material"
+    },
+    {
+      "zh": "皮革",
+      "en": "leather",
+      "cat": "material"
+    },
+    {
+      "zh": "玻璃",
+      "en": "glass",
+      "cat": "material"
+    },
+    {
+      "zh": "雾气",
+      "en": "mist",
+      "cat": "material"
+    },
+    {
+      "zh": "粒子效果",
+      "en": "particle effects",
+      "cat": "material"
+    },
+    {
+      "zh": "光斑",
+      "en": "light spots",
+      "cat": "material"
+    },
+    {
+      "zh": "霓虹反光",
+      "en": "neon reflections",
+      "cat": "material"
+    },
+    {
+      "zh": "湿滑地面",
+      "en": "wet reflective ground",
+      "cat": "material"
+    },
+    {
+      "zh": "锈迹",
+      "en": "rusted surface",
+      "cat": "material"
+    },
+    {
+      "zh": "发光",
+      "en": "glowing effect",
+      "cat": "material"
+    },
+    {
+      "zh": "全息投影",
+      "en": "hologram",
+      "cat": "material"
+    },
+    {
+      "zh": "碎石",
+      "en": "debris",
+      "cat": "material"
+    },
+    {
+      "zh": "忧郁",
+      "en": "melancholy",
+      "cat": "mood"
+    },
+    {
+      "zh": "神秘",
+      "en": "mysterious",
+      "cat": "mood"
+    },
+    {
+      "zh": "宁静",
+      "en": "serene",
+      "cat": "mood"
+    },
+    {
+      "zh": "压迫感",
+      "en": "oppressive atmosphere",
+      "cat": "mood"
+    },
+    {
+      "zh": "史诗感",
+      "en": "epic atmosphere",
+      "cat": "mood"
+    },
+    {
+      "zh": "孤独",
+      "en": "lonely",
+      "cat": "mood"
+    },
+    {
+      "zh": "温柔",
+      "en": "gentle",
+      "cat": "mood"
+    },
+    {
+      "zh": "空灵",
+      "en": "ethereal",
+      "cat": "mood"
+    },
+    {
+      "zh": "恐怖",
+      "en": "horror",
+      "cat": "mood"
+    },
+    {
+      "zh": "梦幻",
+      "en": "dreamy",
+      "cat": "mood"
+    },
+    {
+      "zh": "温馨",
+      "en": "cozy",
+      "cat": "mood"
+    },
+    {
+      "zh": "颓废",
+      "en": "decadent",
+      "cat": "mood"
+    },
+    {
+      "zh": "静谧",
+      "en": "tranquil",
+      "cat": "mood"
+    },
+    {
+      "zh": "竖版",
+      "en": "vertical composition",
+      "cat": "format"
+    },
+    {
+      "zh": "横版",
+      "en": "horizontal composition",
+      "cat": "format"
+    },
+    {
+      "zh": "方图",
+      "en": "square composition",
+      "cat": "format"
+    },
+    {
+      "zh": "海报",
+      "en": "poster design",
+      "cat": "format"
+    },
+    {
+      "zh": "封面插画",
+      "en": "cover illustration",
+      "cat": "format"
+    },
+    {
+      "zh": "拼图",
+      "en": "collage",
+      "cat": "format"
+    },
+    {
+      "zh": "9:16",
+      "en": "9:16 aspect ratio",
+      "cat": "format"
+    },
+    {
+      "zh": "16:9",
+      "en": "16:9 aspect ratio",
+      "cat": "format"
+    }
+  ]
+}

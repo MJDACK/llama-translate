@@ -1,0 +1,48 @@
+{
+  "llamaDir": "llama.cpp",
+  "port": 8085,
+  "attachPort": 8080,
+  "appPort": 8787,
+  "defaultModel": "qwen4b",
+  "openBrowser": false,
+  "gen": {
+    "temperature": 0.25,
+    "top_p": 0.9,
+    "repeat_penalty": 1.05,
+    "max_tokens": 2048
+  },
+  "models": [
+    {
+      "id": "qwen4b",
+      "name": "Qwen3.5-4B · 视觉版（推荐）",
+      "model": "models\\qwen4B\\Qwen3.5-4B-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf",
+      "mmproj": "models\\qwen4B\\mmproj-Qwen3.5-4B-Uncensored-HauhauCS-Aggressive-BF16.gguf",
+      "ngl": 99,
+      "ctx": 8192
+    },
+    {
+      "id": "qwen2b",
+      "name": "Qwen3.5-2B · 快",
+      "model": "models\\qwen2B\\Qwen3.5-2B-UD-Q4_K_XL.gguf",
+      "mmproj": "models\\qwen2B\\mmproj-BF16.gguf",
+      "ngl": 99,
+      "ctx": 8192
+    },
+    {
+      "id": "qwen0.8b",
+      "name": "Qwen3.5-0.8B · 极快",
+      "model": "models\\qwen0.8B\\Qwen3.5-0.8B-UD-Q6_K_XL.gguf",
+      "mmproj": "models\\qwen0.8B\\mmproj-F16.gguf",
+      "ngl": 99,
+      "ctx": 8192
+    },
+    {
+      "id": "qwen9b",
+      "name": "Qwen3.5-9B · 高质量 (吃显存)",
+      "model": "models\\qwen9B\\Qwen3.5-9B-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf",
+      "mmproj": "models\\qwen9B\\mmproj-Qwen3.5-9B-Uncensored-HauhauCS-Aggressive-BF16.gguf",
+      "ngl": 99,
+      "ctx": 8192
+    }
+  ]
+}
