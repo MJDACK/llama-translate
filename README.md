@@ -13,7 +13,7 @@
 | 版本 | 内容 | 大小 | 从哪拿 |
 |---|---|---|---|
 | **lite** | 程序 + 自带 Node 运行时 + 桌面启动器；**不含** llama.cpp 和模型 | ~90 MB | [Releases](https://github.com/MJDACK/llama-translate/releases) 里的 `llama-translate-lite-win64.zip` |
-| **full** | 程序 + llama.cpp（CUDA 12.4）+ 四个 Qwen3.5 模型 | ~13 GB | GitHub 单文件上限 2 GB，放不下；用下面的 `tools\build-full.ps1` 自己打，或从作者网盘取 |
+| **full** | 程序 + llama.cpp（CUDA 12.4）+ 四个 Qwen3.5 模型 | ~13 GB | 超过 GitHub 单文件 2 GB 限制，不在 Release 里；用 `tools\build-full.ps1` 自己打，或由作者另行分发（网盘） |
 
 lite 解压后还不能直接用，要先把 llama.cpp 和模型放进去（见下一节）。full 是解压即用。
 
