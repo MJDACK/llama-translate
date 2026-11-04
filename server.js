@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 /**
  * 提示词翻译台 —— llama.cpp 本地翻译 / 识图 工作台
  * 只依赖 Node 内置模块。负责：拉起 llama-server、切模型、中译英分块、识图。
@@ -267,6 +267,11 @@ function llmPayload(extra) {
     max_tokens: extra.max_tokens
   };
   if (extra.stream !== undefined) out.stream = extra.stream;
+  // 这类模型会先吐一大段 reasoning_content，把 max_tokens 吃光、正文为空
+  // （DeepSeek 上实测：finish_reason=length + content 空）。关掉思考。
+  if (/deepseek\.com$/i.test((() => { try { return new URL(p.baseURL).host; } catch (_) { return ''; } })())) {
+    out.thinking = { type: 'disabled' };
+  }
   return out;
 }
 
@@ -818,6 +823,8 @@ async function llamaStream(messages, opts, onDelta, signal) {
   const dec = new TextDecoder();
   let buf = '';
   let full = '';
+  llamaStream.finish = '';
+  llamaStream.reasoning = '';
   while (true) {
     const { value, done } = await reader.read();
     if (done) break;
@@ -831,7 +838,10 @@ async function llamaStream(messages, opts, onDelta, signal) {
       if (!data || data === '[DONE]') continue;
       let j;
       try { j = JSON.parse(data); } catch (_) { continue; }
-      const d = j.choices?.[0]?.delta?.content;
+      const ch = j.choices?.[0];
+      const d = ch?.delta?.content;
+      if (ch?.delta?.reasoning_content) llamaStream.reasoning += ch.delta.reasoning_content;
+      if (ch?.finish_reason) llamaStream.finish = ch.finish_reason;
       if (d) { full += d; onDelta && onDelta(d, full); }
     }
   }
@@ -1255,13 +1265,24 @@ async function handleChat(req, res, body) {
 
   try {
     const out = await llamaStream(msgs, {
-      max_tokens: Math.min(4096, Number(body.maxTokens) || 1600),
+      max_tokens: Math.min(8192, Number(body.maxTokens) || 3000),
       temperature: Number(body.temperature) || 0.7
     }, (delta, full) => io.send('delta', { text: full }), ctrl.signal);
     const clean = out.trim();
     if (!clean) {
-      // 有的服务会静默回空（比如系统提示词和输入对不上、或不支持多图）
-      io.send('error', { message: '模型没有返回内容：可能系统提示词和这次的输入对不上，或者这家服务不支持多图/图片格式' });
+      const fin = llamaStream.finish || '';
+      const usedReasoning = (llamaStream.reasoning || '').length;
+      if (fin === 'length' && usedReasoning) {
+        io.send('error', {
+          message: `模型把 ${body.maxTokens || 1600} 个 token 全花在「思考」上了（reasoning ${usedReasoning} 字），正文是空的。` +
+            '换一个非思考模型，或者把这次的图/提示词减一减再试。'
+        });
+      } else {
+        io.send('error', {
+          message: '模型没有返回内容：可能系统提示词和这次的输入对不上，或者这家服务不支持多图/图片格式' +
+            (fin ? `（finish_reason=${fin}）` : '')
+        });
+      }
       io.end();
       return;
     }

@@ -553,7 +553,7 @@ function scheduleSync(i) {
 }
 
 /* ------------------------------ 识图 ------------------------------ */
-function downscale(file, maxSide) {
+function downscale(file, maxSide, quality = 0.9) {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const img = new Image();
@@ -567,11 +567,25 @@ function downscale(file, maxSide) {
       const ctx = c.getContext('2d');
       ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, 0, 0, w, h);
-      resolve({ dataUrl: c.toDataURL('image/jpeg', 0.9), w, h, ow: img.width, oh: img.height });
+      resolve({ dataUrl: c.toDataURL('image/jpeg', quality), w, h, ow: img.width, oh: img.height });
     };
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('图片读不了')); };
     img.src = url;
   });
+}
+
+// 图太大云端会静默返回空（实测 2MB 的 base64 → 空回复），所以压到 700KB 以内
+async function shrinkToLimit(file, maxSide = 768, maxChars = 900000) {
+  let side = maxSide;
+  let quality = 0.88;
+  let last = null;
+  for (let i = 0; i < 4; i++) {
+    last = await downscale(file, side, quality);
+    if (last.dataUrl.length <= maxChars) return last;
+    side = Math.max(320, Math.round(side * 0.8));
+    quality = Math.max(0.6, quality - 0.08);
+  }
+  return last;
 }
 
 async function loadImageFile(file) {
@@ -695,8 +709,14 @@ function renderChatLog() {
     const thumbs = list.length
       ? '<div class="thumbs">' + list.map(src => '<img src="' + src + '" alt="">').join('') + '</div>'
       : '';
-    return '<div class="cmsg ' + cls + '"><span class="who">' + who + '</span>' + thumbs +
-      '<div class="body">' + esc(m.content || '') + '</div></div>';
+    const waiting = m.role === 'assistant' && m.live && !String(m.content || '').trim();
+    const blank = m.role === 'assistant' && !m.live && !String(m.content || '').trim();
+    const body = waiting
+      ? '<span class="dots"><i></i><i></i><i></i></span>'
+      : (blank ? '<span class="blank">（这条没收到回复，重发一次试试）</span>' : esc(m.content || ''));
+    return '<div class="cmsg ' + cls + (waiting ? ' waiting' : '') + '"><span class="who">' + who +
+      (m.sec ? ' · ' + m.sec + 's' : '') + '</span>' + thumbs +
+      '<div class="body">' + body + '</div></div>';
   }).join('');
   box.scrollTop = box.scrollHeight;
 }
@@ -710,8 +730,11 @@ async function addChatImages(files) {
   if (list.length > room) toast('一次最多 8 张，多的没加', 2500);
   for (const f of take) {
     try {
-      const d = await downscale(f, 1024);
+      const d = await shrinkToLimit(f, 768);
+      const kb = Math.round(d.dataUrl.length * 0.75 / 1024);
       S.custom.images.push(d.dataUrl);
+      S.custom.imageKb = S.custom.imageKb || [];
+      S.custom.imageKb.push(kb);
     } catch (e) {
       toast(e.message, 2500);
     }
@@ -750,17 +773,31 @@ async function sendCustom() {
 
   S.custom.system = sys;
   const imgs = (S.custom.images || []).slice();
+  const totalKb = Math.round(imgs.reduce((n, d) => n + d.length * 0.75, 0) / 1024);
   const userMsg = { role: 'user', content: text, images: imgs };
   S.custom.messages.push(userMsg);
   $('#cInput').value = '';
   renderChatLog();
   saveLocal();
   setBusy(true);
+  $('#btnCSend').disabled = true;
+  $('#btnCSend').innerHTML = '<span class="spin"></span> 发送中';
 
   const ctrl = new AbortController();
-  const holder = { role: 'assistant', content: '' };
+  const t0 = performance.now();
+  const holder = { role: 'assistant', content: '', live: true };
   S.custom.messages.push(holder);
   renderChatLog();
+  if (imgs.length) $('#statusText').textContent = '发送 ' + imgs.length + ' 张图（' + totalKb + ' KB）…';
+  else $('#statusText').textContent = '发送中…';
+
+  // 等待期间让气泡自己动起来，别让人以为死了
+  let tick = setInterval(() => {
+    const sec = ((performance.now() - t0) / 1000).toFixed(1);
+    const el = document.querySelector('#cLog .cmsg.assistant.waiting .body');
+    if (el) el.innerHTML = '<span class="dots"><i></i><i></i><i></i></span> <em>' + sec + 's</em>';
+    $('#statusText').textContent = '模型回复中… ' + sec + 's';
+  }, 200);
 
   clearChatImages();
 
@@ -774,13 +811,15 @@ async function sendCustom() {
         temperature: 0.7
       },
       {
-        start: () => { $('#statusText').textContent = '生成中…'; },
+        start: () => { $('#statusText').textContent = imgs.length ? '模型读图 ' + imgs.length + ' 张…' : '模型回复中…'; },
         delta: (d) => {
           holder.content = d.text;
+          if (tick) { clearInterval(tick); tick = null; }
           // 只刷最后一条，别整表重绘
           const box = $('#cLog');
           const last = box.lastElementChild;
           if (last && last.classList.contains('assistant')) {
+            last.classList.remove('waiting');
             last.querySelector('.body').textContent = holder.content;
           } else {
             renderChatLog();
@@ -789,13 +828,15 @@ async function sendCustom() {
         },
         done: (d) => {
           holder.content = d.text || holder.content;
+          holder.sec = ((performance.now() - t0) / 1000).toFixed(1);
+          delete holder.live;
           renderChatLog();
           saveLocal();
         },
         error: (d) => {
-          holder.role = 'errf';
           holder.content = '出错：' + (d.message || '未知错误');
-          S.custom.messages[S.custom.messages.length - 1] = { role: 'assistant', content: holder.content };
+          holder.sec = ((performance.now() - t0) / 1000).toFixed(1);
+          S.custom.messages[S.custom.messages.length - 1] = { role: 'assistant', content: holder.content, sec: holder.sec };
           renderChatLog();
           toast('出错：' + String(d.message || '').slice(0, 90), 6000);
         }
@@ -808,6 +849,9 @@ async function sendCustom() {
       toast('出错：' + e.message, 6000);
     }
   } finally {
+    if (tick) { clearInterval(tick); tick = null; }
+    $('#btnCSend').disabled = false;
+    $('#btnCSend').innerHTML = '发送 <span class="arr">→</span>';
     setBusy(false);
     refreshStatus();
     saveLocal();
