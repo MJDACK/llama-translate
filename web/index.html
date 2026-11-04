@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>提示词翻译台 · llama.cpp</title>
-<link rel="stylesheet" href="style.css?v=25">
+<link rel="stylesheet" href="style.css?v=28">
 </head>
 <body>
 
@@ -108,13 +108,13 @@
       <textarea id="sysText" class="systext" spellcheck="false"
         placeholder="系统提示词：上面选一份「载入」，或者直接在这里粘贴 / 改写。每次发送都会带上它。"></textarea>
       <div class="drop cdrop" id="cDrop">
-        <input type="file" id="cFile" accept="image/*" hidden>
+        <input type="file" id="cFile" accept="image/*" multiple hidden>
         <div class="dropInner" id="cDropInner">
-          <div class="dropTitle">拖张图进来（可选，每轮一张）</div>
-          <div class="dropSub">带图时这一轮会一起发给模型</div>
+          <div class="dropTitle">拖图进来 / 点这里选（可多张，最多 8 张）</div>
+          <div class="dropSub">这一轮会连图一起发给模型</div>
         </div>
-        <img id="cPreview" alt="" hidden>
       </div>
+      <div class="cthumbs" id="cThumbs"></div>
       <div class="clog" id="cLog"></div>
       <div class="csend">
         <textarea id="cInput" spellcheck="false" placeholder="说要什么，Enter 发送，Shift + Enter 换行"></textarea>
@@ -248,6 +248,6 @@
 </aside>
 
 <div class="toast" id="toast" hidden></div>
-<script src="app.js?v=25"></script>
+<script src="app.js?v=28"></script>
 </body>
 </html>

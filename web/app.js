@@ -21,7 +21,7 @@ const S = {
   nl: false,           // 当前这批块是「自然语言生成」出来的（没有原文）
   tab: 'text',         // 当前页签
   providers: null,     // { active, list: [...] } 模型来源
-  custom: { system: '', messages: [], image: null },   // 自定义系统提示词 + 对话
+  custom: { system: '', messages: [], images: [] },   // 自定义系统提示词 + 对话（可多图）
   noSync: false        // 翻译/生成进行中，先别回写输入框（避免闪空）
 };
 
@@ -94,7 +94,7 @@ const saveLocal = debounce(() => {
       imgSize: S.imgSize,
       imgMode: S.imgMode,
       sysText: $('#sysText') ? $('#sysText').value : (S.custom && S.custom.system) || '',
-      chatMsgs: (S.custom && S.custom.messages) || [],
+      chatMsgs: ((S.custom && S.custom.messages) || []).map(m => ({ role: m.role, content: m.content })),
       outH: outHeight,
       chatH: chatH,
       outCollapsed: out ? out.classList.contains('collapsed') : false
@@ -125,8 +125,15 @@ function restoreLocal() {
     if (d.imgMode) S.imgMode = d.imgMode;
     if (typeof d.sysText === 'string' && $('#sysText')) $('#sysText').value = d.sysText;
     if (Array.isArray(d.chatMsgs)) {
-      S.custom = S.custom || { system: '', messages: [], image: null };
-      S.custom.messages = d.chatMsgs.filter(m => m && typeof m.content === 'string').slice(-40);
+      S.custom = S.custom || { system: '', messages: [], images: [] };
+      S.custom.messages = d.chatMsgs
+        .filter(m => m && typeof m.content === 'string')
+        .map(m => ({
+          role: m.role,
+          content: m.content,
+          images: Array.isArray(m.images) ? m.images.slice(0, 8) : (m.image ? [m.image] : [])
+        }))
+        .slice(-40);
     }
     if (d.outH) outHeight = d.outH;
     if (d.chatH) chatH = d.chatH;
@@ -684,34 +691,53 @@ function renderChatLog() {
   box.innerHTML = msgs.map(m => {
     const who = m.role === 'assistant' ? '模型' : (m.role === 'system' ? '系统' : '我');
     const cls = m.role === 'assistant' ? 'assistant' : (m.role === 'system' ? 'system' : 'user');
-    const thumb = m.image ? '<img class="thumb" src="' + m.image + '" alt="">' : '';
-    return '<div class="cmsg ' + cls + '"><span class="who">' + who + '</span>' + thumb +
+    const list = Array.isArray(m.images) ? m.images : (m.image ? [m.image] : []);
+    const thumbs = list.length
+      ? '<div class="thumbs">' + list.map(src => '<img src="' + src + '" alt="">').join('') + '</div>'
+      : '';
+    return '<div class="cmsg ' + cls + '"><span class="who">' + who + '</span>' + thumbs +
       '<div class="body">' + esc(m.content || '') + '</div></div>';
   }).join('');
   box.scrollTop = box.scrollHeight;
 }
 
-async function loadChatImage(file) {
-  if (!file || !file.type.startsWith('image/')) { toast('这不是图片'); return; }
-  try {
-    const d = await downscale(file, 1024);
-    S.custom.image = d.dataUrl;
-    const p = $('#cPreview');
-    p.src = d.dataUrl;
-    p.hidden = false;
-    $('#cDropInner').hidden = true;
-    toast('图已就位 · ' + d.w + '×' + d.h, 1600);
-  } catch (e) {
-    toast(e.message, 3000);
+async function addChatImages(files) {
+  const list = Array.from(files || []).filter(f => f && f.type && f.type.startsWith('image/'));
+  if (!list.length) { toast('这不是图片'); return; }
+  const room = 8 - (S.custom.images || []).length;
+  if (room <= 0) { toast('最多 8 张，先去掉几张', 2500); return; }
+  const take = list.slice(0, room);
+  if (list.length > room) toast('一次最多 8 张，多的没加', 2500);
+  for (const f of take) {
+    try {
+      const d = await downscale(f, 1024);
+      S.custom.images.push(d.dataUrl);
+    } catch (e) {
+      toast(e.message, 2500);
+    }
   }
+  renderChatThumbs();
+  if (take.length) toast('已加 ' + take.length + ' 张，共 ' + S.custom.images.length + ' 张', 1600);
 }
 
-function clearChatImage() {
-  S.custom.image = null;
-  const p = $('#cPreview');
-  p.hidden = true;
-  p.removeAttribute('src');
-  $('#cDropInner').hidden = false;
+function renderChatThumbs() {
+  const box = $('#cThumbs');
+  const imgs = (S.custom && S.custom.images) || [];
+  box.innerHTML = imgs.map((src, i) =>
+    '<div class="cthumb"><img src="' + src + '" alt="">' +
+    '<button class="x" data-i="' + i + '" title="移除这张">✕</button></div>'
+  ).join('');
+}
+
+function removeChatImage(i) {
+  if (!S.custom.images) return;
+  S.custom.images.splice(i, 1);
+  renderChatThumbs();
+}
+
+function clearChatImages() {
+  S.custom.images = [];
+  renderChatThumbs();
 }
 
 async function sendCustom() {
@@ -723,7 +749,8 @@ async function sendCustom() {
   if (!text) { toast('说点什么'); return; }
 
   S.custom.system = sys;
-  const userMsg = { role: 'user', content: text, image: S.custom.image || null };
+  const imgs = (S.custom.images || []).slice();
+  const userMsg = { role: 'user', content: text, images: imgs };
   S.custom.messages.push(userMsg);
   $('#cInput').value = '';
   renderChatLog();
@@ -735,15 +762,14 @@ async function sendCustom() {
   S.custom.messages.push(holder);
   renderChatLog();
 
-  const img = userMsg.image;
-  clearChatImage();
+  clearChatImages();
 
   try {
     await streamSSE('/api/chat',
       {
         system: sys,
         messages: S.custom.messages.filter(m => m !== holder).map(m => ({ role: m.role, content: m.content })),
-        image: img || '',
+        images: imgs,
         maxTokens: 1600,
         temperature: 0.7
       },
@@ -1624,12 +1650,16 @@ function bind() {
   $('#sysText').addEventListener('input', saveLocal);
 
   const pickC = () => $('#cFile').click();
-  $('#cDrop').addEventListener('click', (e) => { if (e.target.id !== 'cPreview') pickC(); });
-  $('#cPreview').addEventListener('dblclick', (e) => { e.stopPropagation(); clearChatImage(); });
+  $('#cDrop').addEventListener('click', pickC);
+  $('#cThumbs').addEventListener('click', (e) => {
+    const b = e.target.closest('button.x');
+    if (b) removeChatImage(Number(b.dataset.i));
+  });
   $('#cFile').addEventListener('change', (e) => {
-    const f = e.target.files && e.target.files[0];
+    // 必须先把 File 抓成数组再清 input.value —— 清空会让 FileList 变空
+    const arr = Array.from(e.target.files || []);
     e.target.value = '';
-    if (f) loadChatImage(f);
+    if (arr.length) addChatImages(arr);
   });
   ['dragenter', 'dragover'].forEach(ev => $('#cDrop').addEventListener(ev, (e) => {
     e.preventDefault(); $('#cDrop').classList.add('over');
@@ -1638,8 +1668,8 @@ function bind() {
     e.preventDefault(); $('#cDrop').classList.remove('over');
   }));
   $('#cDrop').addEventListener('drop', (e) => {
-    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-    if (f) loadChatImage(f);
+    const arr = Array.from((e.dataTransfer && e.dataTransfer.files) || []);
+    if (arr.length) addChatImages(arr);
   });
 
   $('#btnChatClear').addEventListener('click', () => {
@@ -1698,6 +1728,7 @@ async function boot() {
   renderBlocks();
   loadPromptList();
   renderChatLog();
+  renderChatThumbs();
   setTimeout(() => { autoGrow($('#desc')); autoGrow($('#chatInput')); }, 50);
   refreshStatus();
   setInterval(refreshStatus, 2500);

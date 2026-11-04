@@ -1218,7 +1218,12 @@ function safePromptPath(rel) {
 async function handleChat(req, res, body) {
   const system = String(body.system || '').trim();
   const history = Array.isArray(body.messages) ? body.messages.slice(-20) : [];
-  const image = String(body.image || '');
+  // 图片：支持多张（images 数组），也兼容老的单张 image 字段
+  const rawImgs = Array.isArray(body.images) ? body.images : (body.image ? [body.image] : []);
+  const images = rawImgs
+    .map(x => String(x || ''))
+    .filter(x => x.startsWith('data:image/'))
+    .slice(0, 8);           // 一次最多 8 张，太多了谁都吃不消
   if (!system) return json(res, 400, { error: '还没有系统提示词' });
   if (!history.length) return json(res, 400, { error: '没有内容' });
 
@@ -1228,13 +1233,12 @@ async function handleChat(req, res, body) {
     const m = history[i];
     const text = String(m.content || '');
     const isLastUser = i === history.length - 1 && m.role === 'user';
-    if (isLastUser && image.startsWith('data:image/')) {
+    if (isLastUser && images.length) {
       msgs.push({
         role: 'user',
-        content: [
-          { type: 'text', text },
-          { type: 'image_url', image_url: { url: image } }
-        ]
+        content: [{ type: 'text', text }].concat(
+          images.map(url => ({ type: 'image_url', image_url: { url } }))
+        )
       });
     } else {
       msgs.push({ role: m.role === 'assistant' ? 'assistant' : 'user', content: text });
@@ -1246,7 +1250,7 @@ async function handleChat(req, res, body) {
   res.on('close', () => { if (!res.writableEnded) ctrl.abort(); });
   io.send('start', {
     model: isRemote() ? `${activeProvider().name} · ${activeProvider().model}` : state.modelAlias,
-    image: image.startsWith('data:image/')
+    images: images.length
   });
 
   try {
@@ -1254,7 +1258,14 @@ async function handleChat(req, res, body) {
       max_tokens: Math.min(4096, Number(body.maxTokens) || 1600),
       temperature: Number(body.temperature) || 0.7
     }, (delta, full) => io.send('delta', { text: full }), ctrl.signal);
-    io.send('done', { text: out.trim() });
+    const clean = out.trim();
+    if (!clean) {
+      // 有的服务会静默回空（比如系统提示词和输入对不上、或不支持多图）
+      io.send('error', { message: '模型没有返回内容：可能系统提示词和这次的输入对不上，或者这家服务不支持多图/图片格式' });
+      io.end();
+      return;
+    }
+    io.send('done', { text: clean });
     io.end();
   } catch (e) {
     if (e.name === 'AbortError') { io.end(); return; }
