@@ -21,6 +21,7 @@ const S = {
   nl: false,           // 当前这批块是「自然语言生成」出来的（没有原文）
   tab: 'text',         // 当前页签
   providers: null,     // { active, list: [...] } 模型来源
+  custom: { system: '', messages: [], image: null },   // 自定义系统提示词 + 对话
   noSync: false        // 翻译/生成进行中，先别回写输入框（避免闪空）
 };
 
@@ -92,6 +93,8 @@ const saveLocal = debounce(() => {
       blockDir: S.blockDir,
       imgSize: S.imgSize,
       imgMode: S.imgMode,
+      sysText: $('#sysText') ? $('#sysText').value : (S.custom && S.custom.system) || '',
+      chatMsgs: (S.custom && S.custom.messages) || [],
       outH: outHeight,
       chatH: chatH,
       outCollapsed: out ? out.classList.contains('collapsed') : false
@@ -120,6 +123,11 @@ function restoreLocal() {
     S.blockDir = d.blockDir || S.dir;
     if (d.imgSize) S.imgSize = d.imgSize;
     if (d.imgMode) S.imgMode = d.imgMode;
+    if (typeof d.sysText === 'string' && $('#sysText')) $('#sysText').value = d.sysText;
+    if (Array.isArray(d.chatMsgs)) {
+      S.custom = S.custom || { system: '', messages: [], image: null };
+      S.custom.messages = d.chatMsgs.filter(m => m && typeof m.content === 'string').slice(-40);
+    }
     if (d.outH) outHeight = d.outH;
     if (d.chatH) chatH = d.chatH;
     if (d.outCollapsed) {
@@ -632,6 +640,155 @@ function visionFail(msg) {
   toast('识图失败：' + raw.slice(0, 80), 6000);
 }
 
+/* -------------------- 自定义系统提示词 + 对话 -------------------- */
+async function loadPromptList() {
+  try {
+    const r = await fetch('/api/prompts', { cache: 'no-store' });
+    const j = await r.json();
+    const sel = $('#sysPick');
+    if (!j.list || !j.list.length) {
+      sel.innerHTML = '<option value="">（目录里没有 .md）</option>';
+      return;
+    }
+    sel.innerHTML = j.list
+      .map(f => '<option value="' + esc(f.rel) + '">' + esc(f.rel.replace(/\.(md|txt)$/i, '')) + '</option>')
+      .join('');
+  } catch (e) {
+    toast('读不到提示词目录：' + e.message, 3000);
+  }
+}
+
+async function loadPromptFile() {
+  const rel = $('#sysPick').value;
+  if (!rel) return;
+  try {
+    const r = await fetch('/api/prompts/read?path=' + encodeURIComponent(rel));
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || '读不到');
+    $('#sysText').value = j.text;
+    S.custom.system = j.text;
+    toast('已载入 ' + rel + '（' + j.text.length + ' 字）', 2200);
+    saveLocal();
+  } catch (e) {
+    toast('载入失败：' + e.message, 3000);
+  }
+}
+
+function renderChatLog() {
+  const box = $('#cLog');
+  const msgs = (S.custom && S.custom.messages) || [];
+  if (!msgs.length) {
+    box.innerHTML = '<div class="clogEmpty">选一份系统提示词（或自己写），下面说要求。<br>可以带图，一轮一轮改。</div>';
+    return;
+  }
+  box.innerHTML = msgs.map(m => {
+    const who = m.role === 'assistant' ? '模型' : (m.role === 'system' ? '系统' : '我');
+    const cls = m.role === 'assistant' ? 'assistant' : (m.role === 'system' ? 'system' : 'user');
+    const thumb = m.image ? '<img class="thumb" src="' + m.image + '" alt="">' : '';
+    return '<div class="cmsg ' + cls + '"><span class="who">' + who + '</span>' + thumb +
+      '<div class="body">' + esc(m.content || '') + '</div></div>';
+  }).join('');
+  box.scrollTop = box.scrollHeight;
+}
+
+async function loadChatImage(file) {
+  if (!file || !file.type.startsWith('image/')) { toast('这不是图片'); return; }
+  try {
+    const d = await downscale(file, 1024);
+    S.custom.image = d.dataUrl;
+    const p = $('#cPreview');
+    p.src = d.dataUrl;
+    p.hidden = false;
+    $('#cDropInner').hidden = true;
+    toast('图已就位 · ' + d.w + '×' + d.h, 1600);
+  } catch (e) {
+    toast(e.message, 3000);
+  }
+}
+
+function clearChatImage() {
+  S.custom.image = null;
+  const p = $('#cPreview');
+  p.hidden = true;
+  p.removeAttribute('src');
+  $('#cDropInner').hidden = false;
+}
+
+async function sendCustom() {
+  if (S.busy) return;
+  if (!S.server || S.server.status !== 'ready') { toast('模型还没就绪'); return; }
+  const sys = $('#sysText').value.trim();
+  if (!sys) { toast('先载入或写一段系统提示词'); return; }
+  const text = $('#cInput').value.trim();
+  if (!text) { toast('说点什么'); return; }
+
+  S.custom.system = sys;
+  const userMsg = { role: 'user', content: text, image: S.custom.image || null };
+  S.custom.messages.push(userMsg);
+  $('#cInput').value = '';
+  renderChatLog();
+  saveLocal();
+  setBusy(true);
+
+  const ctrl = new AbortController();
+  const holder = { role: 'assistant', content: '' };
+  S.custom.messages.push(holder);
+  renderChatLog();
+
+  const img = userMsg.image;
+  clearChatImage();
+
+  try {
+    await streamSSE('/api/chat',
+      {
+        system: sys,
+        messages: S.custom.messages.filter(m => m !== holder).map(m => ({ role: m.role, content: m.content })),
+        image: img || '',
+        maxTokens: 1600,
+        temperature: 0.7
+      },
+      {
+        start: () => { $('#statusText').textContent = '生成中…'; },
+        delta: (d) => {
+          holder.content = d.text;
+          // 只刷最后一条，别整表重绘
+          const box = $('#cLog');
+          const last = box.lastElementChild;
+          if (last && last.classList.contains('assistant')) {
+            last.querySelector('.body').textContent = holder.content;
+          } else {
+            renderChatLog();
+          }
+          box.scrollTop = box.scrollHeight;
+        },
+        done: (d) => {
+          holder.content = d.text || holder.content;
+          renderChatLog();
+          saveLocal();
+        },
+        error: (d) => {
+          holder.role = 'errf';
+          holder.content = '出错：' + (d.message || '未知错误');
+          S.custom.messages[S.custom.messages.length - 1] = { role: 'assistant', content: holder.content };
+          renderChatLog();
+          toast('出错：' + String(d.message || '').slice(0, 90), 6000);
+        }
+      },
+      ctrl.signal);
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      S.custom.messages[S.custom.messages.length - 1] = { role: 'assistant', content: '出错：' + e.message };
+      renderChatLog();
+      toast('出错：' + e.message, 6000);
+    }
+  } finally {
+    setBusy(false);
+    refreshStatus();
+    saveLocal();
+  }
+}
+
+
 /* ------------------------------ 词典 ------------------------------ */
 function renderDict() {
   const g = S.glossary;
@@ -989,6 +1146,11 @@ function switchTab(name) {
   $$('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
   $$('.tabbody').forEach(b => { b.hidden = b.dataset.pane !== name; });
   S.tab = name;
+  // 自定义页签自己就是对话区，把下面那个「自然语言修改」框收起来，腾出高度
+  const chatEl = $('#chat'), gripEl = $('#leftGrip');
+  const hideChat = name === 'custom';
+  if (chatEl) chatEl.classList.toggle('hide', hideChat);
+  if (gripEl) gripEl.classList.toggle('hide', hideChat);
   // 自然语言页签里的框是「指令」，不是内容，不参与「改输入」
   const inBtn = document.querySelector('#chatMode button[data-m="input"]');
   if (inBtn) {
@@ -1455,6 +1617,45 @@ function bind() {
       toast('切回本地失败：' + e.message, 3500);
     }
   });
+
+  /* ---- 自定义系统提示词 + 对话 ---- */
+  $('#btnSysLoad').addEventListener('click', loadPromptFile);
+  $('#sysPick').addEventListener('change', loadPromptFile);
+  $('#sysText').addEventListener('input', saveLocal);
+
+  const pickC = () => $('#cFile').click();
+  $('#cDrop').addEventListener('click', (e) => { if (e.target.id !== 'cPreview') pickC(); });
+  $('#cPreview').addEventListener('dblclick', (e) => { e.stopPropagation(); clearChatImage(); });
+  $('#cFile').addEventListener('change', (e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (f) loadChatImage(f);
+  });
+  ['dragenter', 'dragover'].forEach(ev => $('#cDrop').addEventListener(ev, (e) => {
+    e.preventDefault(); $('#cDrop').classList.add('over');
+  }));
+  ['dragleave', 'drop'].forEach(ev => $('#cDrop').addEventListener(ev, (e) => {
+    e.preventDefault(); $('#cDrop').classList.remove('over');
+  }));
+  $('#cDrop').addEventListener('drop', (e) => {
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) loadChatImage(f);
+  });
+
+  $('#btnChatClear').addEventListener('click', () => {
+    if (!confirm('清空对话？（系统提示词保留）')) return;
+    S.custom.messages = [];
+    renderChatLog();
+    saveLocal();
+    toast('对话已清空', 1600);
+  });
+  $('#btnCSend').addEventListener('click', sendCustom);
+  $('#cInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendCustom();
+    }
+  });
 }
 
 // 左栏上下分栏：上面至少留够这一栏内容需要的高度，聊天区最矮 110px
@@ -1495,6 +1696,8 @@ async function boot() {
   } catch (_) { S.glossary = { categories: [], entries: [] }; }
 
   renderBlocks();
+  loadPromptList();
+  renderChatLog();
   setTimeout(() => { autoGrow($('#desc')); autoGrow($('#chatInput')); }, 50);
   refreshStatus();
   setInterval(refreshStatus, 2500);

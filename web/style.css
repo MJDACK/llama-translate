@@ -376,3 +376,33 @@ textarea:focus{border-color:var(--accent-dim);box-shadow:0 0 0 3px rgba(111,141,
 .pactions{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
 .pchk{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--dim);cursor:pointer}
 .pchk input{width:14px;height:14px;accent-color:var(--accent)}
+
+/* ---------- 自定义系统提示词 + 对话 ---------- */
+.systext{flex:0 0 auto;height:84px;min-height:60px;font-size:12.5px;line-height:1.55;font-family:var(--mono)}
+.cdrop{min-height:58px}
+.cdrop .dropInner{padding:8px}
+.cdrop .dropTitle{font-size:12px}
+.cdrop .dropSub{font-size:10.5px}
+.cdrop img{max-width:100%;max-height:110px;object-fit:contain;border-radius:8px}
+.clog{
+  flex:1 1 auto;min-height:86px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;
+  background:#0d1016;border:1px solid var(--line);border-radius:10px;padding:10px;
+}
+.cmsg{display:flex;flex-direction:column;gap:3px;max-width:100%}
+.cmsg .who{font-size:10.5px;color:var(--dim2);font-family:var(--mono);letter-spacing:.4px}
+.cmsg .body{
+  font-size:12.8px;line-height:1.65;white-space:pre-wrap;word-break:break-word;
+  background:#151a24;border:1px solid var(--line);border-radius:9px;padding:8px 10px;
+}
+.cmsg.user .body{background:#1a2130;border-color:#26314a}
+.cmsg.user .body{color:var(--txt)}
+.cmsg.assistant .body{background:#12161f}
+.cmsg.system .body{font-family:var(--mono);font-size:11.5px;color:var(--dim2);max-height:90px;overflow:auto}
+.cmsg .thumb{max-width:130px;max-height:96px;border-radius:8px;border:1px solid var(--line)}
+.cmsg.err .body{color:var(--err);border-color:#4a2530;background:#1a1216}
+.clogEmpty{color:var(--dim2);font-size:12px;text-align:center;padding:22px 8px;line-height:1.7}
+.csend{display:flex;gap:8px;align-items:flex-end;flex:0 0 auto}
+.csend textarea{flex:1;min-height:52px;max-height:120px;font-size:13px;padding:9px 11px}
+.csend .btn{height:38px;flex:0 0 auto}
+/* 自定义页签不需要下面那个「自然语言修改」框，腾出高度 */
+.chatbox.hide,.leftgrip.hide{display:none}

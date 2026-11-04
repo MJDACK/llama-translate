@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>提示词翻译台 · llama.cpp</title>
-<link rel="stylesheet" href="style.css?v=24">
+<link rel="stylesheet" href="style.css?v=25">
 </head>
 <body>
 
@@ -31,6 +31,7 @@
       <button class="tab active" data-tab="text">文字翻译</button>
       <button class="tab" data-tab="image">图片识图</button>
       <button class="tab" data-tab="nl">自然语言</button>
+      <button class="tab" data-tab="custom">自定义</button>
     </div>
 
     <div class="tabbody" data-pane="text">
@@ -96,6 +97,29 @@
         <button class="btn primary" id="btnGen">生成 <span class="arr">→</span></button>
       </div>
       <div class="hint">Ctrl + Enter 生成 · 每块都有中文和英文</div>
+    </div>
+
+    <div class="tabbody" data-pane="custom" hidden>
+      <div class="row wrap">
+        <select id="sysPick" class="sel" title="从系统提示词目录里选一份"></select>
+        <button class="btn sm" id="btnSysLoad">载入</button>
+        <button class="btn sm ghost" id="btnChatClear">清空对话</button>
+      </div>
+      <textarea id="sysText" class="systext" spellcheck="false"
+        placeholder="系统提示词：上面选一份「载入」，或者直接在这里粘贴 / 改写。每次发送都会带上它。"></textarea>
+      <div class="drop cdrop" id="cDrop">
+        <input type="file" id="cFile" accept="image/*" hidden>
+        <div class="dropInner" id="cDropInner">
+          <div class="dropTitle">拖张图进来（可选，每轮一张）</div>
+          <div class="dropSub">带图时这一轮会一起发给模型</div>
+        </div>
+        <img id="cPreview" alt="" hidden>
+      </div>
+      <div class="clog" id="cLog"></div>
+      <div class="csend">
+        <textarea id="cInput" spellcheck="false" placeholder="说要什么，Enter 发送，Shift + Enter 换行"></textarea>
+        <button class="btn primary" id="btnCSend">发送 <span class="arr">→</span></button>
+      </div>
     </div>
 
     <div class="leftgrip" id="leftGrip" title="拖动调整上下高度，双击复位"></div>
@@ -224,6 +248,6 @@
 </aside>
 
 <div class="toast" id="toast" hidden></div>
-<script src="app.js?v=24"></script>
+<script src="app.js?v=25"></script>
 </body>
 </html>

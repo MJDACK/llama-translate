@@ -1197,6 +1197,73 @@ async function handleGenerate(req, res, body) {
   }
 }
 
+/* ------------------------------------------------------------------ */
+/* 自定义系统提示词 + 对话                                              */
+/* ------------------------------------------------------------------ */
+function promptRoot() {
+  const dir = config.promptDir || 'E:\\comfyui\\ComfyUI-Image\\系统提示词';
+  return path.isAbsolute(dir) ? dir : path.join(BASE, dir);
+}
+
+// 只允许读 promptRoot 里面的文件，挡住 ../ 之类
+function safePromptPath(rel) {
+  if (!rel || /[:\\]/.test(rel.replace(/^[a-zA-Z]:/, '')) && !rel) return null;
+  const root = path.resolve(promptRoot());
+  const full = path.resolve(root, rel);
+  if (full === root) return null;
+  if (!full.startsWith(root + path.sep)) return null;
+  return full;
+}
+
+async function handleChat(req, res, body) {
+  const system = String(body.system || '').trim();
+  const history = Array.isArray(body.messages) ? body.messages.slice(-20) : [];
+  const image = String(body.image || '');
+  if (!system) return json(res, 400, { error: '还没有系统提示词' });
+  if (!history.length) return json(res, 400, { error: '没有内容' });
+
+  const msgs = [];
+  msgs.push({ role: 'system', content: system });
+  for (let i = 0; i < history.length; i++) {
+    const m = history[i];
+    const text = String(m.content || '');
+    const isLastUser = i === history.length - 1 && m.role === 'user';
+    if (isLastUser && image.startsWith('data:image/')) {
+      msgs.push({
+        role: 'user',
+        content: [
+          { type: 'text', text },
+          { type: 'image_url', image_url: { url: image } }
+        ]
+      });
+    } else {
+      msgs.push({ role: m.role === 'assistant' ? 'assistant' : 'user', content: text });
+    }
+  }
+
+  const io = sseOpen(res);
+  const ctrl = new AbortController();
+  res.on('close', () => { if (!res.writableEnded) ctrl.abort(); });
+  io.send('start', {
+    model: isRemote() ? `${activeProvider().name} · ${activeProvider().model}` : state.modelAlias,
+    image: image.startsWith('data:image/')
+  });
+
+  try {
+    const out = await llamaStream(msgs, {
+      max_tokens: Math.min(4096, Number(body.maxTokens) || 1600),
+      temperature: Number(body.temperature) || 0.7
+    }, (delta, full) => io.send('delta', { text: full }), ctrl.signal);
+    io.send('done', { text: out.trim() });
+    io.end();
+  } catch (e) {
+    if (e.name === 'AbortError') { io.end(); return; }
+    log('chat error', e.message);
+    io.send('error', { message: e.message });
+    io.end();
+  }
+}
+
 async function handleVision(req, res, body) {
   const dataUrl = String(body.image || '');
   if (!dataUrl.startsWith('data:image/')) return json(res, 400, { error: '不是有效的图片' });
@@ -1500,6 +1567,42 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/vision' && req.method === 'POST') {
       const body = JSON.parse(await readBody(req) || '{}');
       return handleVision(req, res, body);
+    }
+
+    /* ---------------- 自定义系统提示词 + 对话（可带图） ---------------- */
+    if (p === '/api/prompts' && req.method === 'GET') {
+      const root = promptRoot();
+      if (!fs.existsSync(root)) return json(res, 200, { root, list: [] });
+      const list = [];
+      (function walk(dir) {
+        for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+          const full = path.join(dir, ent.name);
+          if (ent.isDirectory()) { walk(full); continue; }
+          if (!/\.(md|txt)$/i.test(ent.name)) continue;
+          const st = fs.statSync(full);
+          list.push({
+            rel: path.relative(root, full).replace(/\\/g, '/'),
+            name: ent.name.replace(/\.(md|txt)$/i, ''),
+            size: st.size
+          });
+        }
+      })(root);
+      list.sort((a, b) => a.rel.localeCompare(b.rel, 'zh'));
+      return json(res, 200, { root, list });
+    }
+
+    if (p === '/api/prompts/read' && req.method === 'GET') {
+      const rel = String(u.searchParams.get('path') || '');
+      const full = safePromptPath(rel);
+      if (!full) return json(res, 400, { error: '路径不合法' });
+      if (!fs.existsSync(full)) return json(res, 404, { error: '文件不存在' });
+      const text = fs.readFileSync(full, 'utf8');
+      return json(res, 200, { rel, text, size: text.length });
+    }
+
+    if (p === '/api/chat' && req.method === 'POST') {
+      const body = JSON.parse(await readBody(req) || '{}');
+      return handleChat(req, res, body);
     }
 
     if (p === '/api/release' && req.method === 'POST') {

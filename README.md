@@ -140,6 +140,14 @@ csc /target:winexe /out:提示词翻译台.exe /win32icon:app.ico Launcher.cs
 
 每次修改都有 `撤销上次`（最多 20 步），改输入会连原文一起回退。改动过的块会闪一下。
 
+**自定义页签**（第四个页签）：把任意一份系统提示词塞给模型，然后像聊天一样一轮一轮改。
+
+- 上面选一份 `.md` 点 `载入`（默认读 `config.json` 里的 `promptDir`，也就是 `E:\comfyui\ComfyUI-Image\系统提示词`，里面的 `文生图/system_prompt_t2i.md`、`图像编辑/system_prompt_edit.md` 都会自动列出来）；也可以直接在框里粘贴、改写。
+- 中间可以拖一张图进去，**这一轮会连图一起发**；双击缩略图取消。
+- 下面就是对话：Enter 发送、Shift+Enter 换行，多轮上下文自动带上（最多 20 轮），回复流式出字。
+- 系统提示词只存在浏览器 localStorage 里，对话记录也是（`清空对话` 只清消息，不动提示词）。
+- 每轮请求就是 `system(你的提示词) + 历史 + 本轮用户消息(+图)`，没加任何私货。
+
 **词典**（右上角按钮）：182 条 AI 绘画常用词，分 8 类。输入里命中的词条会自动塞进提示词，强制模型用指定译法（`洛丽塔 → lolita fashion`、`浅景深 → shallow depth of field`）；英译中时反过来用（`backlighting → 逆光`）。点词条即复制，可以自己加词，能按分类开关。
 
 **释放显存**（右上角按钮）：停掉本地 `llama-server`，把显存还给显卡（4B 模型约 4 GB）。状态会变成「模型已释放 · 显存空出」。下次翻译、识图、改写时自动重新拉起（约 17 秒），不用手点重启。接着外部 llama-server 时这个按钮不生效（返回 409，本程序停不了别人的进程）。
@@ -180,6 +188,7 @@ csc /target:winexe /out:提示词翻译台.exe /win32icon:app.ico Launcher.cs
 - **模型来源**：`llmEndpoint()` 统一决定往哪发——本地是 `http://127.0.0.1:<port>/v1/chat/completions`，云端是 `provider.baseURL + /chat/completions` 加 `Authorization: Bearer <key>`。`ensureReady()` 遇到云端直接跳过，不会去拉本地进程。
 - **关键参数**：请求里必须带 `chat_template_kwargs: { enable_thinking: false }`。这套 Qwen3.5 模板默认开思考链，不关的话会先吐一大段 `Thinking Process`，翻译变成 20 秒以上且拿不到正文。这个字段只有本地才带。
 - **远端 body 很挑**：必须带 `model`，而且多余字段会被 422。所以 `llmPayload()` 走到云端时只发 `model / messages / temperature / top_p / max_tokens / stream`，把 llama.cpp 那套 `repeat_penalty`、`chat_template_kwargs` 全剔掉。
+- **自定义提示词**：`GET /api/prompts`（列 `promptDir` 下的 .md/.txt）、`GET /api/prompts/read?path=`（带目录穿越防护）、`POST /api/chat`（SSE，`{system, messages, image}`，最后一条 user 消息带图就拼成多模态数组）。
 - **块怎么来**：后台把文本按标点切成 N 条，编号发给模型，要求同样编号逐行返回；流式解析每一行就是一块。模型漏行时会自动补一次请求。
 - **自然语言修改**：`/api/revise`。把当前所有译文编号发给模型，要求它**只输出改动过的行**（`【说明】`+`【改动】`+编号行），返回后按编号打补丁。这样模型不会顺手重写没让它动的块。
 - **释放显存**：`/api/release`。停掉子进程并把状态置为 `released`；`llamaStream` / `llamaOnce` 开头统一走 `ensureReady()`，发现模型不在就用上次的模型重新拉起（并发只拉一次），所以释放之后接着翻译不会报错，只是要多等一次加载。
@@ -194,6 +203,7 @@ csc /target:winexe /out:提示词翻译台.exe /win32icon:app.ico Launcher.cs
   "port": 8085,          // 本程序自己拉起的服务端口
   "attachPort": 8080,    // 启动时先看这个口有没有现成的 llama-server，有就直接用
   "appPort": 8787,       // 界面端口
+  "promptDir": "E:\\comfyui\\ComfyUI-Image\\系统提示词",  // 「自定义」页签列提示词文件的目录
   "defaultModel": "qwen4b",
   "openBrowser": false,   // 是否自动打开浏览器（默认关）
   "gen": { "temperature": 0.25, "top_p": 0.9, "repeat_penalty": 1.05, "max_tokens": 2048 },
