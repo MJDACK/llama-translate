@@ -4,6 +4,7 @@ llama.cpp/
 runtime/
 logs/
 dist/
+providers.json
 
 # 通用
 node_modules/

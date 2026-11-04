@@ -51,6 +51,7 @@ body{
 .dot.ready{background:var(--ok);box-shadow:0 0 8px var(--ok)}
 .dot.loading{background:var(--warn);animation:pulse 1.2s infinite}
 .dot.error{background:var(--err)}
+.dot.idle{background:var(--dim2);box-shadow:none}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 
 .sel,.btn,input,select,textarea{font-family:inherit;color:inherit}
@@ -352,3 +353,26 @@ textarea:focus{border-color:var(--accent-dim);box-shadow:0 0 0 3px rgba(111,141,
 }
 .outbox textarea:focus{border-color:var(--accent-dim)}
 .outbox textarea::placeholder{color:#3f4756}
+
+/* 模型来源（API 密钥）抽屉 */
+.pdrawer{width:420px}
+.pfield{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--dim)}
+.pfield input,.pfield select{
+  background:#10131a;border:1px solid var(--line);color:var(--txt);
+  border-radius:9px;padding:8px 10px;font-size:13px;outline:none;width:100%;
+  font-family:inherit;
+}
+.pfield input:focus,.pfield select:focus{border-color:var(--accent-dim)}
+.pmodels{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.pmodels button{
+  background:#171b24;border:1px solid var(--line);color:var(--dim);
+  border-radius:7px;padding:3px 8px;font-size:11.5px;cursor:pointer;font-family:var(--mono);
+}
+.pmodels button:hover{border-color:var(--accent-dim);color:var(--txt)}
+.phint{font-size:12px;color:var(--dim2);line-height:1.6}
+.phint.dim{color:#4a5262}
+.phint.ok{color:var(--ok)}
+.phint.bad{color:var(--err)}
+.pactions{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
+.pchk{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--dim);cursor:pointer}
+.pchk input{width:14px;height:14px;accent-color:var(--accent)}

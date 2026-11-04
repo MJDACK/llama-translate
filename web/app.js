@@ -20,6 +20,7 @@ const S = {
   chatMode: 'blocks',  // blocks = 改提示词块，input = 改左边输入
   nl: false,           // 当前这批块是「自然语言生成」出来的（没有原文）
   tab: 'text',         // 当前页签
+  providers: null,     // { active, list: [...] } 模型来源
   noSync: false        // 翻译/生成进行中，先别回写输入框（避免闪空）
 };
 
@@ -604,15 +605,31 @@ async function doVision() {
           }
           saveLocal();
         },
-        error: (d) => toast('出错：' + d.message, 4000)
+        error: (d) => visionFail(d.message)
       },
       ctrl.signal);
   } catch (e) {
-    if (e.name !== 'AbortError') toast('出错：' + e.message, 4000);
+    if (e.name !== 'AbortError') visionFail(e.message);
   } finally {
     setBusy(false);
     refreshStatus();
   }
+}
+
+// 识图失败要把话说在明处：写进描述框（不会自己消失），别只弹个 toast
+function visionFail(msg) {
+  const raw = String(msg || '未知错误');
+  let hint = '';
+  if (/not activated|no permission|unauthorized|鉴权|401|403/i.test(raw)) {
+    hint = '\n（这家服务没开通这个模型，或者密钥没权限——换一个模型/换一家再试）';
+  } else if (/image|vision|multimodal|content.*type/i.test(raw)) {
+    hint = '\n（这个模型不吃图片，换成支持识图的模型）';
+  }
+  const text = '识图失败：' + raw + hint;
+  $('#desc').value = text;
+  autoGrow($('#desc'));
+  $('#statusText').textContent = '识图失败';
+  toast('识图失败：' + raw.slice(0, 80), 6000);
 }
 
 /* ------------------------------ 词典 ------------------------------ */
@@ -823,10 +840,15 @@ async function refreshStatus() {
   }
   S.server = st;
   const dot = $('#dot');
-  dot.className = 'dot ' + (st.status === 'ready' ? 'ready' : st.status === 'loading' ? 'loading' : st.status === 'error' ? 'error' : 'loading');
+  dot.className = 'dot ' + (st.status === 'ready' ? 'ready'
+    : st.status === 'loading' ? 'loading'
+    : st.status === 'error' ? 'error'
+    : st.status === 'released' ? 'idle' : 'loading');
   if (st.status === 'ready') {
     const name = st.modelName || st.modelAlias || '';
     $('#statusText').textContent = name + (st.attached ? ' · 外部' : '') + (st.vision ? ' · 可识图' : ' · 纯文本');
+  } else if (st.status === 'released') {
+    $('#statusText').textContent = '模型已释放 · 显存空出';
   } else {
     $('#statusText').textContent = st.message || st.status;
   }
@@ -840,13 +862,112 @@ async function refreshStatus() {
     const opt = Array.from(sel.options).find(o => o.value === st.modelId);
     if (opt) sel.value = st.modelId;
   }
-  sel.disabled = !!st.attached || st.status === 'loading';
+  sel.disabled = !!st.attached || st.status === 'loading' || !!st.remote;
   $('#btnVision').title = st.vision ? '' : '当前模型没有加载视觉模块';
+
+  // 云端来源：本地那两个按钮没意义
+  const remote = !!st.remote;
+  $('#btnRelease').disabled = remote;
+  $('#btnRestart').disabled = remote;
+  $('#btnRelease').title = remote ? '当前用云端模型，本地没占显存'
+    : '释放显存：停掉本地 llama-server，下次翻译会自动重新加载';
+  $('#pCur').textContent = remote ? (st.modelName || '') : '本地 llama.cpp';
+}
+
+/* ------------------------------ 模型来源（API 密钥） ------------------------------ */
+async function loadProviders() {
+  try {
+    const r = await fetch('/api/providers', { cache: 'no-store' });
+    const j = await r.json();
+    S.providers = j;
+    const list = [{ id: 'local', name: '本地 llama.cpp（自带模型）' }].concat(j.list || []);
+    $('#pSel').innerHTML = list
+      .map(p => '<option value="' + esc(p.id) + '">' + esc(p.name) + (p.hasKey ? ' ✓' : '') + '</option>')
+      .join('');
+    $('#pSel').value = j.active || 'local';
+    fillProviderForm($('#pSel').value);
+  } catch (e) {
+    toast('读不到模型来源：' + e.message, 3000);
+  }
+}
+
+function currentProvider(id) {
+  const j = S.providers || { list: [] };
+  return (j.list || []).find(p => p.id === id) || null;
+}
+
+function fillProviderForm(id) {
+  const isLocal = id === 'local';
+  const pv = currentProvider(id);
+  const hint = $('#pHint');
+  const fields = ['#pBase', '#pKey', '#pModel'];
+  fields.forEach(s => { $(s).disabled = isLocal; });
+  $('#pTest').disabled = isLocal;
+  $('#pSave').disabled = isLocal;
+  $('#pRefresh').disabled = isLocal;
+  $('#pVision').disabled = isLocal;
+  $('#pModels').innerHTML = '';
+
+  if (isLocal) {
+    $('#pBase').value = '';
+    $('#pKey').value = '';
+    $('#pModel').value = '';
+    $('#pVision').checked = false;
+    $('#pBase').placeholder = '选一家云端服务后再填';
+    $('#pModel').placeholder = '同上';
+    $('#pKey').placeholder = '本地模型不需要密钥';
+    hint.className = 'phint';
+    hint.textContent = '本地 llama.cpp 有自己的 gguf 模型，不需要 API 密钥。选上面任意一家填密钥即可改用云端。';
+    return;
+  }
+  if (!pv) return;
+  $('#pBase').value = pv.baseURL || '';
+  $('#pBase').placeholder = 'https://maas.qianwenaiapi.com/compatible-mode/v1';
+  $('#pModel').placeholder = 'deepseek-v4.1-flash';
+  $('#pKey').value = '';
+  $('#pKey').placeholder = pv.hasKey
+    ? '已保存（末尾 ' + pv.keyTail + '），留空表示不改'
+    : 'sk-…（只存在本机 providers.json）';
+  $('#pModel').value = pv.model || '';
+  $('#pVision').checked = !!pv.vision;
+  $('#pModels').innerHTML = (pv.presetModels || [])
+    .filter(Boolean)
+    .map(m => '<button data-m="' + esc(m) + '">' + esc(m) + '</button>')
+    .join('');
+  hint.className = 'phint';
+  hint.textContent = '填完点「测试连接」，通了再「保存并使用」。模型名可以点下面的标签，或点「刷新模型」从服务端拉最新清单。';
+}
+
+// 把表单里的东西存到后端；onlySwitch 时不改动字段
+async function saveProviderForm(id, { activate = false } = {}) {
+  const pv = currentProvider(id);
+  const body = {
+    id,
+    baseURL: $('#pBase').value.trim(),
+    model: $('#pModel').value.trim(),
+    vision: $('#pVision').checked
+  };
+  const key = $('#pKey').value.trim();
+  if (key) body.apiKey = key;              // 留空 = 保留原来的
+  if (!body.baseURL || !body.model) throw new Error('API 地址和模型名都要填');
+  if (!pv) throw new Error('未知来源');
+  let r = await fetch('/api/providers', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+  });
+  if (!r.ok) throw new Error((await r.json()).error || '保存失败');
+  if (activate) {
+    r = await fetch('/api/providers', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ active: id })
+    });
+    if (!r.ok) throw new Error((await r.json()).error || '切换失败');
+  }
 }
 
 /* ------------------------------ 切模型 ------------------------------ */
 async function switchModel(id) {
   if (!id) return;
+  if (S.server && S.server.remote) { toast('当前用云端模型，先切回本地', 3000); return; }
   toast('正在切换模型…', 3000);
   try {
     const r = await fetch('/api/model', {
@@ -1208,6 +1329,131 @@ function bind() {
       toast('正在重启，稍等…', 3000);
       setTimeout(refreshStatus, 800);
     } catch (e) { toast('重启失败：' + e.message); }
+  });
+
+  $('#btnRelease').addEventListener('click', async () => {
+    if (S.busy) { toast('等当前任务跑完再释放', 2500); return; }
+    if (!confirm('释放显存？会停掉本地 llama-server，下次翻译时自动重新加载（约 20 秒）。')) return;
+    const btn = $('#btnRelease');
+    btn.disabled = true;
+    try {
+      const r = await fetch('/api/release', { method: 'POST' });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) toast(j.error || '释放失败', 3000);
+      else toast('显存已释放', 2500);
+    } catch (e) {
+      toast('释放失败：' + e.message, 3000);
+    } finally {
+      btn.disabled = false;
+      refreshStatus();
+    }
+  });
+
+  /* ---- 模型来源抽屉 ---- */
+  $('#btnProvider').addEventListener('click', async () => {
+    $('#pdrawer').hidden = false;
+    await loadProviders();
+  });
+  $('#btnCloseProvider').addEventListener('click', () => { $('#pdrawer').hidden = true; });
+  $('#pSel').addEventListener('change', (e) => fillProviderForm(e.target.value));
+  $('#pModels').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-m]');
+    if (b) $('#pModel').value = b.dataset.m;
+  });
+
+  $('#pSave').addEventListener('click', async () => {
+    const id = $('#pSel').value;
+    if (id === 'local') return;
+    const t = toast('保存中…', 6000);
+    try {
+      await saveProviderForm(id, { activate: true });
+      $('#pHint').className = 'phint ok';
+      $('#pHint').textContent = '已保存并使用「' + (currentProvider(id)?.name || id) + '」，本地显存已释放。';
+      toast('已切到 ' + (currentProvider(id)?.name || id), 3000);
+      await refreshStatus();
+      await loadProviders();
+    } catch (e) {
+      $('#pHint').className = 'phint bad';
+      $('#pHint').textContent = '保存失败：' + e.message;
+      toast('保存失败：' + e.message, 4000);
+    }
+  });
+
+  $('#pTest').addEventListener('click', async () => {
+    const id = $('#pSel').value;
+    if (id === 'local') return;
+    const hint = $('#pHint');
+    hint.className = 'phint';
+    hint.textContent = '测试中…';
+    try {
+      await saveProviderForm(id);            // 先存，后端拿存的配置去测
+      const r = await fetch('/api/providers/test', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      const j = await r.json();
+      if (j.ok) {
+        hint.className = 'phint ok';
+        hint.textContent = '连接正常' + (j.models ? '，列出 ' + j.models + ' 个模型' : '') + '（' + j.ms + ' ms）';
+      } else {
+        hint.className = 'phint bad';
+        hint.textContent = j.reason || j.error || '测试失败';
+      }
+    } catch (e) {
+      hint.className = 'phint bad';
+      hint.textContent = '测试失败：' + e.message;
+    }
+  });
+
+  $('#pRefresh').addEventListener('click', async () => {
+    const id = $('#pSel').value;
+    if (id === 'local') return;
+    const hint = $('#pHint');
+    hint.className = 'phint';
+    hint.textContent = '正在拉模型列表…';
+    try {
+      await saveProviderForm(id);            // 先存地址和密钥，后端拿最新的去拉
+      const r = await fetch('/api/providers/models', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      const j = await r.json();
+      if (!j.ok) {
+        hint.className = 'phint bad';
+        hint.textContent = j.reason || '拉取失败';
+        return;
+      }
+      const list = j.models || [];
+      $('#pModels').innerHTML = list
+        .map(m => '<button data-m="' + esc(m) + '">' + esc(m) + '</button>')
+        .join('');
+      const cur = $('#pModel').value.trim();
+      if (!cur || !list.includes(cur)) {
+        if (list.length) $('#pModel').value = list[0];
+      }
+      hint.className = 'phint ok';
+      hint.textContent = '拉到 ' + list.length + ' 个模型，点标签换一个。';
+    } catch (e) {
+      hint.className = 'phint bad';
+      hint.textContent = '拉取失败：' + e.message;
+    }
+  });
+
+  $('#pLocal').addEventListener('click', async () => {
+    try {
+      const r = await fetch('/api/providers', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: 'local' })
+      });
+      if (!r.ok) throw new Error((await r.json()).error || '切换失败');
+      toast('已切回本地模型，正在加载…', 3500);
+      $('#pHint').className = 'phint';
+      $('#pHint').textContent = '已切回本地，模型加载中（约 20 秒）。';
+      await loadProviders();
+      refreshStatus();
+    } catch (e) {
+      toast('切回本地失败：' + e.message, 3500);
+    }
   });
 }
 

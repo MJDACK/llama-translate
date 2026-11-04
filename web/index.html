@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>提示词翻译台 · llama.cpp</title>
-<link rel="stylesheet" href="style.css?v=20">
+<link rel="stylesheet" href="style.css?v=24">
 </head>
 <body>
 
@@ -20,6 +20,8 @@
   </div>
   <button class="btn icon" id="btnRestart" title="重启本地 llama-server">↻</button>
   <select id="modelSel" class="sel" title="切换模型"></select>
+  <button class="btn" id="btnProvider" title="模型来源 / 填 API 密钥">API</button>
+  <button class="btn" id="btnRelease" title="释放显存：停掉本地 llama-server，下次翻译会自动重新加载">释放显存</button>
   <button class="btn" id="btnDict">词典 <em id="dictCount">–</em></button>
 </header>
 
@@ -188,7 +190,40 @@
   </div>
 </aside>
 
+<aside class="drawer pdrawer" id="pdrawer" hidden>
+  <div class="dhead">
+    <strong>模型来源</strong>
+    <span class="dsub" id="pCur">本地 llama.cpp</span>
+    <div class="grow"></div>
+    <button class="btn sm" id="btnCloseProvider">关闭</button>
+  </div>
+  <div class="dbody">
+    <label class="pfield">来源
+      <select id="pSel"></select>
+    </label>
+    <label class="pfield">API 地址
+      <input id="pBase" spellcheck="false" placeholder="https://maas.qianwenaiapi.com/compatible-mode/v1">
+    </label>
+    <label class="pfield">API 密钥
+      <input id="pKey" type="password" spellcheck="false" autocomplete="off" placeholder="sk-… 只存在本机 providers.json">
+    </label>
+    <label class="pfield">模型名
+      <input id="pModel" spellcheck="false" placeholder="deepseek-v4.1-flash">
+      <div class="pmodels" id="pModels"></div>
+    </label>
+    <label class="pchk"><input type="checkbox" id="pVision"><span>这个模型支持图片输入（识图功能可用）</span></label>
+    <div class="phint" id="pHint">填完点「测试连接」，通了再「保存并使用」。</div>
+    <div class="pactions">
+      <button class="btn" id="pTest">测试连接</button>
+      <button class="btn" id="pRefresh">刷新模型</button>
+      <button class="btn primary" id="pSave">保存并使用</button>
+      <button class="btn" id="pLocal">用回本地</button>
+    </div>
+    <div class="phint dim">切到云端会自动释放本地显存；切回本地会重新加载模型。</div>
+  </div>
+</aside>
+
 <div class="toast" id="toast" hidden></div>
-<script src="app.js?v=20"></script>
+<script src="app.js?v=24"></script>
 </body>
 </html>

@@ -111,6 +111,168 @@ function sseOpen(res) {
 const baseUrl = () => `http://127.0.0.1:${state.port}`;
 
 /* ------------------------------------------------------------------ */
+/* 模型来源：本地 llama.cpp / 各家 OpenAI 兼容 API                        */
+/* ------------------------------------------------------------------ */
+const PROVIDERS_FILE = path.join(ROOT, 'providers.json');
+
+// 预置几家 OpenAI 兼容的服务，密钥留空，用户在界面里填。
+// DeepSeek / 千问 / 其它 三条都走同一个千问 MaaS 网关（一把 key 通用），
+// 分开放只是为了让模型清单别混在一起。清单可以「刷新模型」从 /models 直接拉。
+const MAAS_BASE = 'https://maas.qianwenaiapi.com/compatible-mode/v1';
+
+const PROVIDER_PRESETS = [
+  {
+    id: 'deepseek',
+    name: 'DeepSeek 官方',
+    baseURL: 'https://api.deepseek.com',
+    models: ['deepseek-flash', 'deepseek-v4-pro'],
+    vision: true          // deepseek-flash 实测吃图
+  },
+  {
+    id: 'qwen',
+    name: '千问 Qwen（MaaS）',
+    baseURL: MAAS_BASE,
+    models: ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.7-max', 'qwen3.7-plus', 'qwen3.6-plus', 'qwen3.6-flash'],
+    vision: true
+  },
+  {
+    id: 'maas-other',
+    name: '其它 MaaS（GLM / Kimi / MiniMax）',
+    baseURL: MAAS_BASE,
+    models: ['glm-5.3', 'glm-5.2', 'glm-5.1', 'glm-5', 'kimi-k2.7-code', 'kimi-k2.6', 'kimi-k2.5', 'MiniMax-M2.5'],
+    vision: false
+  },
+  {
+    id: 'moonshot', name: '月之暗面 Kimi（官方）', baseURL: 'https://api.moonshot.cn/v1',
+    models: ['kimi-k2-0905-preview', 'moonshot-v1-8k'], vision: false
+  },
+  {
+    id: 'siliconflow', name: '硅基流动', baseURL: 'https://api.siliconflow.cn/v1',
+    models: ['Qwen/Qwen2.5-7B-Instruct', 'deepseek-ai/DeepSeek-V3'], vision: false
+  },
+  {
+    id: 'openrouter', name: 'OpenRouter', baseURL: 'https://openrouter.ai/api/v1',
+    models: ['openai/gpt-4o-mini', 'anthropic/claude-3.5-sonnet'], vision: true
+  },
+  {
+    id: 'openai', name: 'OpenAI', baseURL: 'https://api.openai.com/v1',
+    models: ['gpt-4o-mini', 'gpt-4o'], vision: true
+  },
+  {
+    id: 'custom', name: '自定义（OpenAI 兼容）', baseURL: 'http://127.0.0.1:1234/v1',
+    models: [''], vision: false
+  }
+];
+
+// providers.json: { active: 'local' | <id>, list: [{ id, name, baseURL, apiKey, model, vision }] }
+let providers = { active: 'local', list: [] };
+
+const PROVIDERS_SCHEMA = 6;   // 换了预置清单就 +1，旧的 providers.json 会自动升级（密钥保留）
+
+function loadProviders() {
+  let saved = null;
+  try { saved = JSON.parse(fs.readFileSync(PROVIDERS_FILE, 'utf8')); } catch (_) { }
+  const fresh = !saved || (saved.v || 0) < PROVIDERS_SCHEMA;   // 旧格式：模型清单按新版来
+  const savedList = (saved && Array.isArray(saved.list)) ? saved.list : [];
+  // 同一个网关（同一 baseURL）填过的密钥，新拆出来的入口直接复用，不用再贴一次
+  const sharedKey = (baseURL, own) => {
+    if (own) return own;
+    const hit = savedList.find(x => x && x.apiKey && x.baseURL === baseURL);
+    return hit ? hit.apiKey : '';
+  };
+  const list = PROVIDER_PRESETS.map(preset => {
+    const old = savedList.find(x => x && x.id === preset.id) || null;
+    return {
+      id: preset.id,
+      name: preset.name,
+      baseURL: (!fresh && old && old.baseURL) || preset.baseURL,
+      apiKey: sharedKey(preset.baseURL, old && old.apiKey),   // 密钥无论新旧都保留
+      model: (!fresh && old && old.model) || preset.models[0] || '',
+      presetModels: preset.models,
+      vision: (!fresh && old && typeof old.vision === 'boolean') ? old.vision : preset.vision,
+      preset: true
+    };
+  });
+  // 用户自己加的（id 不在预置里）
+  for (const extra of savedList) {
+    if (!extra || !extra.id || list.some(x => x.id === extra.id)) continue;
+    list.push({
+      id: extra.id, name: extra.name || extra.id, baseURL: extra.baseURL || '',
+      apiKey: extra.apiKey || '', model: extra.model || '',
+      presetModels: [], vision: !!extra.vision, preset: false
+    });
+  }
+  const active = saved && saved.active ? saved.active : 'local';
+  providers = { active: list.some(p => p.id === active) ? active : 'local', list };
+  return providers;
+}
+
+function saveProviders() {
+  const data = {
+    v: PROVIDERS_SCHEMA,
+    active: providers.active,
+    list: providers.list.map(p => ({
+      id: p.id, name: p.name, baseURL: p.baseURL, apiKey: p.apiKey, model: p.model, vision: !!p.vision
+    }))
+  };
+  fs.writeFileSync(PROVIDERS_FILE, JSON.stringify(data, null, 2), 'utf8');
+}
+
+function providerById(id) { return providers.list.find(p => p.id === id) || null; }
+
+// 当前生效的来源：'local' 走本地 llama-server，其它走远端 API
+function activeProvider() {
+  if (providers.active === 'local') return null;
+  const p = providerById(providers.active);
+  return p && p.baseURL && p.model ? p : null;
+}
+
+const isRemote = () => !!activeProvider();
+
+// 拼端点 + 鉴权头。远端统一按 OpenAI 兼容格式
+function llmEndpoint() {
+  const p = activeProvider();
+  if (!p) {
+    return { url: `${baseUrl()}/v1/chat/completions`, headers: {}, local: true };
+  }
+  const base = p.baseURL.replace(/\/+$/, '');
+  return {
+    url: base.endsWith('/chat/completions') ? base : base + '/chat/completions',
+    headers: p.apiKey ? { Authorization: `Bearer ${p.apiKey}` } : {},
+    local: false
+  };
+}
+
+// 网络层失败时 fetch 只给一句 "fetch failed"，把原因和地址补出来
+function netFailMsg(ep, e) {
+  const host = (() => { try { return new URL(ep.url).host; } catch (_) { return ep.url; } })();
+  const code = e?.cause?.code || e?.cause?.errno || '';
+  const name = providerById(providers.active)?.name || 'API';
+  if (code) return `连不上 ${name}（${host}）：${code}`;
+  return `连不上 ${name}（${host}）：${e.message}`;
+}
+
+// 远端 API 的 body 要求很严：必须带 model，多余字段会被判 422
+// （DeepSeek 官方就是这样：missing field `model` / unexpected field）。
+function llmPayload(extra) {
+  const p = activeProvider();
+  if (!p) {
+    return { ...extra, chat_template_kwargs: { enable_thinking: false } };
+  }
+  const out = {
+    model: p.model,
+    messages: extra.messages,
+    temperature: extra.temperature,
+    top_p: extra.top_p,
+    max_tokens: extra.max_tokens
+  };
+  if (extra.stream !== undefined) out.stream = extra.stream;
+  return out;
+}
+
+loadProviders();
+
+/* ------------------------------------------------------------------ */
 /* llama-server 生命周期                                                */
 /* ------------------------------------------------------------------ */
 let child = null;
@@ -380,6 +542,19 @@ async function switchModel(id) {
 async function bootServer() {
   if (config.openBrowser !== false) { /* 浏览器在 listen 之后再开 */ }
 
+  // 0) 上次选的是云端 API：不拉本地模型，一个字节显存都不占
+  const rp = activeProvider();
+  if (rp) {
+    state.status = 'ready';
+    state.remote = true;
+    state.modelAlias = rp.model;
+    state.modelName = `${rp.name} · ${rp.model}`;
+    state.vision = !!rp.vision;
+    state.message = `${rp.name} · ${rp.model}`;
+    log('使用云端来源', rp.name, rp.model);
+    return;
+  }
+
   // 1) 优先接外部的（用户在 8080 手动起的）llama-server
   for (const p of [config.attachPort, config.port]) {
     if (!p) continue;
@@ -596,23 +771,48 @@ Output 6-10 numbered lines, each a short comma-friendly noun phrase or gerund ph
 /* ------------------------------------------------------------------ */
 /* 调 llama-server                                                     */
 /* ------------------------------------------------------------------ */
+
+// 模型可能被「释放显存」停掉了，也可能自己挂了。发请求前先确认它在，
+// 不在就用上次的模型重新拉起来（同一时间只会拉一次）。
+let ensuring = null;
+function ensureReady() {
+  if (isRemote()) return Promise.resolve();
+  if (state.attached) return Promise.resolve();
+  if (state.status === 'ready' && state.port) return Promise.resolve();
+  if (ensuring) return ensuring;
+
+  const m = modelById(state.modelId || config.defaultModel) || config.models[0];
+  state.status = 'loading';
+  state.message = `加载 ${m.name}…`;
+  log('ensureReady: 重新拉起模型', m.id);
+  ensuring = launchModel(m).finally(() => { ensuring = null; });
+  return ensuring;
+}
+
 async function llamaStream(messages, opts, onDelta, signal) {
-  const payload = {
+  await ensureReady();
+  const payload = llmPayload({
     messages,
     stream: true,
     temperature: opts.temperature ?? config.gen.temperature,
     top_p: opts.top_p ?? config.gen.top_p,
     repeat_penalty: opts.repeat_penalty ?? config.gen.repeat_penalty,
-    max_tokens: opts.max_tokens ?? config.gen.max_tokens,
-    chat_template_kwargs: { enable_thinking: false }
-  };
-  const r = await fetch(`${baseUrl()}/v1/chat/completions`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-    signal
+    max_tokens: opts.max_tokens ?? config.gen.max_tokens
   });
-  if (!r.ok) throw new Error(`llama-server ${r.status}: ${(await r.text()).slice(0, 300)}`);
+  const ep = llmEndpoint();
+  let r;
+  try {
+    r = await fetch(ep.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...ep.headers },
+      body: JSON.stringify(payload),
+      signal
+    });
+  } catch (e) {
+    if (e.name === 'AbortError') throw e;
+    throw new Error(netFailMsg(ep, e));
+  }
+  if (!r.ok) throw new Error(`${ep.local ? 'llama-server' : providerById(providers.active)?.name || 'API'} ${r.status}: ${(await r.text()).slice(0, 300)}`);
 
   const reader = r.body.getReader();
   const dec = new TextDecoder();
@@ -639,22 +839,28 @@ async function llamaStream(messages, opts, onDelta, signal) {
 }
 
 async function llamaOnce(messages, opts = {}) {
-  const payload = {
+  await ensureReady();
+  const payload = llmPayload({
     messages,
     stream: false,
     temperature: opts.temperature ?? config.gen.temperature,
     top_p: opts.top_p ?? config.gen.top_p,
     repeat_penalty: opts.repeat_penalty ?? config.gen.repeat_penalty,
-    max_tokens: opts.max_tokens ?? config.gen.max_tokens,
-    chat_template_kwargs: { enable_thinking: false }
-  };
-  const r = await fetch(`${baseUrl()}/v1/chat/completions`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
+    max_tokens: opts.max_tokens ?? config.gen.max_tokens
   });
-  const j = await r.json();
-  if (!r.ok) throw new Error(`llama-server ${r.status}: ${JSON.stringify(j).slice(0, 300)}`);
+  const ep = llmEndpoint();
+  let r;
+  try {
+    r = await fetch(ep.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...ep.headers },
+      body: JSON.stringify(payload)
+    });
+  } catch (e) {
+    throw new Error(netFailMsg(ep, e));
+  }
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(`${ep.local ? 'llama-server' : providerById(providers.active)?.name || 'API'} ${r.status}: ${JSON.stringify(j).slice(0, 300)}`);
   return j.choices?.[0]?.message?.content || '';
 }
 
@@ -722,7 +928,7 @@ async function handleTranslate(req, res, body) {
     mode,
     direction: dir,
     glossary: hits.map(h => ({ zh: h.zh, en: h.en })),
-    model: state.modelAlias
+    model: isRemote() ? `${activeProvider().name} · ${activeProvider().model}` : state.modelAlias
   });
 
   const ctrl = new AbortController();
@@ -1000,7 +1206,7 @@ async function handleVision(req, res, body) {
   const ctrl = new AbortController();
   res.on('close', () => { if (!res.writableEnded) ctrl.abort(); });
 
-  io.send('start', { model: state.modelAlias, english });
+  io.send('start', { model: isRemote() ? `${activeProvider().name} · ${activeProvider().model}` : state.modelAlias, english });
   try {
     const sys = english ? SYS_VISION_EN : SYS_VISION(detail);
     const ask = english
@@ -1074,6 +1280,26 @@ const server = http.createServer(async (req, res) => {
 
   try {
     if (p === '/api/state') {
+      const rp = activeProvider();
+      // 用云端时，状态就是「就绪」，显示哪家 + 哪个模型
+      if (rp) {
+        return json(res, 200, {
+          status: 'ready',
+          message: `${rp.name} · ${rp.model}`,
+          modelId: 'remote:' + rp.id,
+          modelAlias: rp.model,
+          modelName: `${rp.name} · ${rp.model}`,
+          vision: !!rp.vision,
+          attached: false,
+          remote: true,
+          port: 0,
+          hint: '',
+          models: config.models.map(m => ({ id: m.id, name: m.name, vision: !!m.mmproj, ctx: m.ctx })),
+          defaultModel: config.defaultModel,
+          provider: providers.active,
+          providers: providers.list.map(x => ({ id: x.id, name: x.name, hasKey: !!x.apiKey, model: x.model, vision: x.vision }))
+        });
+      }
       // 外部服务掉线时如实反馈，别一直显示就绪
       if (state.status === 'ready' && state.port && !(await alive(state.port))) {
         state.status = 'error';
@@ -1085,14 +1311,142 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, {
         status: state.status, message: state.message, modelId: state.modelId,
         modelAlias: state.modelAlias, modelName: state.modelName, vision: state.vision, attached: state.attached,
+        remote: false,
         port: state.port, hint: state.hint,
         models: config.models.map(m => ({ id: m.id, name: m.name, vision: !!m.mmproj, ctx: m.ctx })),
-        defaultModel: config.defaultModel
+        defaultModel: config.defaultModel,
+        // 模型来源：'local' 或某个 provider 的 id
+        provider: providers.active,
+        providers: providers.list.map(x => ({ id: x.id, name: x.name, hasKey: !!x.apiKey, model: x.model, vision: x.vision }))
       });
+    }
+
+    /* ------------------------- 模型来源（API 密钥） ------------------------- */
+    if (p === '/api/providers' && req.method === 'GET') {
+      return json(res, 200, {
+        active: providers.active,
+        list: providers.list.map(x => ({
+          id: x.id, name: x.name, baseURL: x.baseURL, model: x.model,
+          presetModels: x.presetModels || [], vision: x.vision, preset: x.preset,
+          hasKey: !!x.apiKey, keyTail: x.apiKey ? x.apiKey.slice(-4) : ''
+        }))
+      });
+    }
+
+    if (p === '/api/providers' && req.method === 'POST') {
+      const body = JSON.parse(await readBody(req) || '{}');
+
+      // 1) 保存某一家的设置
+      if (body.id) {
+        let pv = providerById(body.id);
+        if (!pv && body.name) {              // 新加一条自定义
+          pv = { id: body.id, name: body.name, baseURL: '', apiKey: '', model: '', presetModels: [], vision: false, preset: false };
+          providers.list.push(pv);
+        }
+        if (!pv) return json(res, 404, { error: '未知来源' });
+        if (typeof body.baseURL === 'string') pv.baseURL = body.baseURL.trim();
+        if (typeof body.model === 'string') pv.model = body.model.trim();
+        if (typeof body.name === 'string' && body.name.trim()) pv.name = body.name.trim();
+        if (typeof body.apiKey === 'string') pv.apiKey = body.apiKey.trim();
+        if (typeof body.vision === 'boolean') pv.vision = body.vision;
+        saveProviders();
+      }
+
+      // 2) 切换来源
+      if (typeof body.active === 'string') {
+        const want = body.active;
+        if (want !== 'local') {
+          const pv = providerById(want);
+          if (!pv) return json(res, 404, { error: '未知来源' });
+          if (!pv.baseURL || !pv.model) return json(res, 400, { error: '这个来源还没配置地址和模型' });
+          if (!pv.apiKey) return json(res, 400, { error: '还没填 API 密钥，填好并测试通过再切过去' });
+        }
+        providers.active = want;
+        saveProviders();
+        log('来源切换 ->', want);
+        if (want === 'local') {
+          // 回到本地：把模型拉起来（失败也让前端能看到错误）
+          const m = modelById(state.modelId || config.defaultModel) || config.models[0];
+          launchModel(m).catch(e => { state.status = 'error'; state.message = e.message; });
+        } else {
+          // 用云就不该继续占着显存
+          if (child) {
+            state.status = 'released';
+            state.message = '已切到云端，本地模型已释放';
+            await stopChild();
+          }
+        }
+      }
+      return json(res, 200, { ok: true, active: providers.active });
+    }
+
+    if (p === '/api/providers/models' && req.method === 'POST') {
+      const body = JSON.parse(await readBody(req) || '{}');
+      const pv = providerById(body.id);
+      if (!pv) return json(res, 404, { error: '未知来源' });
+      const base = String(pv.baseURL || '').replace(/\/+$/, '');
+      if (!base) return json(res, 400, { error: '先填 API 地址' });
+      const headers = {};
+      if (pv.apiKey) headers.Authorization = `Bearer ${pv.apiKey}`;
+      try {
+        const r = await fetch(`${base}/models`, { headers, signal: AbortSignal.timeout(15000) });
+        if (!r.ok) return json(res, 200, { ok: false, reason: `取模型列表失败（${r.status}）`, status: r.status });
+        const j = await r.json();
+        const ids = (Array.isArray(j?.data) ? j.data : []).map(x => x && x.id).filter(Boolean).sort();
+        if (ids.length) {
+          pv.presetModels = ids;      // 只改内存里的快捷标签，落盘由前端保存时带走
+          log('拉到模型列表', pv.id, ids.length, '个');
+        }
+        return json(res, 200, { ok: true, models: ids });
+      } catch (e) {
+        return json(res, 200, { ok: false, reason: '连不上：' + e.message });
+      }
+    }
+
+    if (p === '/api/providers/test' && req.method === 'POST') {
+      const body = JSON.parse(await readBody(req) || '{}');
+      const pv = providerById(body.id);
+      if (!pv) return json(res, 404, { error: '未知来源' });
+      const base = String(pv.baseURL || '').replace(/\/+$/, '');
+      if (!base) return json(res, 400, { error: '先填 API 地址' });
+      const headers = { 'Content-Type': 'application/json' };
+      if (pv.apiKey) headers.Authorization = `Bearer ${pv.apiKey}`;
+      const t0 = Date.now();
+      try {
+        // 先试 /models（便宜、快）；有的服务不实现，就退化成一次 1 token 的对话
+        let modelsOk = false, modelsCount = 0;
+        try {
+          const r = await fetch(`${base}/models`, { headers, signal: AbortSignal.timeout(12000) });
+          if (r.ok) {
+            const j = await r.json();
+            modelsCount = Array.isArray(j?.data) ? j.data.length : 0;
+            modelsOk = true;
+          } else if (r.status === 401 || r.status === 403) {
+            return json(res, 200, { ok: false, reason: '鉴权失败（' + r.status + '）：密钥不对或没有这家服务的权限' });
+          }
+        } catch (_) { }
+
+        if (!modelsOk) {
+          const r = await fetch(`${base}/chat/completions`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ model: pv.model, messages: [{ role: 'user', content: 'hi' }], max_tokens: 1 }),
+            signal: AbortSignal.timeout(20000)
+          });
+          if (!r.ok) {
+            const txt = (await r.text()).slice(0, 200);
+            return json(res, 200, { ok: false, reason: `对话测试失败（${r.status}）：${txt}` });
+          }
+        }
+        return json(res, 200, { ok: true, ms: Date.now() - t0, models: modelsCount });
+      } catch (e) {
+        return json(res, 200, { ok: false, reason: '连不上：' + e.message });
+      }
     }
 
     if (p === '/api/model' && req.method === 'POST') {
       const body = JSON.parse(await readBody(req) || '{}');
+      if (isRemote()) return json(res, 409, { error: '当前用云端模型，切回本地才能换本地模型' });
       if (state.attached) return json(res, 409, { error: '外部服务，无法切换模型' });
       if (!modelById(body.id)) return json(res, 400, { error: '未知模型' });
       json(res, 202, { ok: true });
@@ -1148,7 +1502,28 @@ const server = http.createServer(async (req, res) => {
       return handleVision(req, res, body);
     }
 
+    if (p === '/api/release' && req.method === 'POST') {
+      if (isRemote()) {
+        return json(res, 409, { error: '当前用云端模型，本地根本没占显存' });
+      }
+      if (state.attached) {
+        return json(res, 409, { error: `当前接的是外部 llama-server（:${state.port}），本程序停不了它` });
+      }
+      if (state.status === 'loading') {
+        return json(res, 409, { error: '正在加载模型，等它加载完再释放' });
+      }
+      const wasReady = state.status === 'ready';
+      state.status = 'released';
+      state.message = wasReady ? '模型已释放，显存已归还' : '模型已停止';
+      state.vision = false;
+      state.startedAt = 0;
+      log('release: 停掉 llama-server，释放显存');
+      await stopChild();
+      return json(res, 200, { ok: true, message: state.message });
+    }
+
     if (p === '/api/restart' && req.method === 'POST') {
+      if (isRemote()) return json(res, 409, { error: '当前用云端模型，先把来源切回本地' });
       const m = modelById(state.modelId || config.defaultModel) || config.models[0];
       state.attached = false;
       json(res, 202, { ok: true });

@@ -142,6 +142,34 @@ csc /target:winexe /out:提示词翻译台.exe /win32icon:app.ico Launcher.cs
 
 **词典**（右上角按钮）：182 条 AI 绘画常用词，分 8 类。输入里命中的词条会自动塞进提示词，强制模型用指定译法（`洛丽塔 → lolita fashion`、`浅景深 → shallow depth of field`）；英译中时反过来用（`backlighting → 逆光`）。点词条即复制，可以自己加词，能按分类开关。
 
+**释放显存**（右上角按钮）：停掉本地 `llama-server`，把显存还给显卡（4B 模型约 4 GB）。状态会变成「模型已释放 · 显存空出」。下次翻译、识图、改写时自动重新拉起（约 17 秒），不用手点重启。接着外部 llama-server 时这个按钮不生效（返回 409，本程序停不了别人的进程）。
+
+**云端模型 / API 密钥**（右上角 `API` 按钮）：不想占用显卡时，直接填别家服务的密钥就能用他们的模型，跟 DSH 里配 provider 一个思路。
+
+预置清单（都走 OpenAI 兼容协议）：
+
+| 来源 | 地址 | 模型 |
+|---|---|---|
+| DeepSeek 官方 | `https://api.deepseek.com` | `deepseek-flash`、`deepseek-v4-pro`（官方 `/models` 就这两个） |
+| 千问 Qwen（MaaS） | `https://maas.qianwenaiapi.com/compatible-mode/v1` | qwen3.6~3.8 六个，另外 `deepseek-v4.1-flash` 也在这边 |
+| 其它 MaaS（GLM / Kimi / MiniMax） | 同上 | glm-5~5.3、kimi-k2.5/2.6/2.7-code、MiniMax-M2.5 |
+| 月之暗面 Kimi（官方） | `https://api.moonshot.cn/v1` | kimi-k2-0905-preview 等 |
+| 硅基流动 / OpenRouter / OpenAI | 各自官方地址 | — |
+| 自定义（OpenAI 兼容） | 自己填 | LM Studio、Ollama、内网网关都能用 |
+
+后三个 MaaS 入口地址相同、**密钥只填一次**（同一个网关的 key 会自动共享）。
+
+注意：`deepseek-v4.1-flash` 是千问 MaaS 那边的模型，**不在 `api.deepseek.com` 上**——官方只给 `deepseek-flash` 和 `deepseek-v4-pro`。两个平台的 key 也不通用，填错会 401。
+
+流程：选一家 → 填 API 密钥 →（点下面的模型标签，或点 `刷新模型` 从 `/models` 拉真实清单）→ `测试连接` → 通了点 `保存并使用`。
+
+- 切到云端会**自动停掉本地 llama-server**，显存立刻回来（实测 5193 MiB → 873 MiB）；右上角状态变成「DeepSeek · deepseek-v4.1-flash」。
+- 没填密钥时不能切过去（返回 400），免得切到一个用不了的状态。
+- 本地那两个按钮（↻ 重启、释放显存）在云端模式下自动禁用——本地根本没在跑。
+- 想回本地，点抽屉里的 `用回本地`，约 6 秒加载完。
+- 密钥只写在本机 `providers.json`（已加进 `.gitignore`），不会上传到任何地方；界面上只显示末 4 位，留空保存表示不修改。切到云端后**重启程序也不会再拉本地模型**，开机就零显存占用。
+- 每个来源有个「支持图片输入」勾选框，识图功能按它决定能不能用（MaaS 的 v4.1-flash / qwen3.8 都吃图）。
+
 ---
 
 ## 技术要点
@@ -149,9 +177,12 @@ csc /target:winexe /out:提示词翻译台.exe /win32icon:app.ico Launcher.cs
 - **后端**：`server.js`，纯 Node 内置模块，无依赖。负责拉起 / 切换 `llama-server`、切句、拼提示词、代理流式请求。
 - **前端**：`web/`，原生 JS，无构建步骤。
 - **模型调用**：llama-server 的 OpenAI 兼容接口 `/v1/chat/completions`，SSE 流式。
-- **关键参数**：请求里必须带 `chat_template_kwargs: { enable_thinking: false }`。这套 Qwen3.5 模板默认开思考链，不关的话会先吐一大段 `Thinking Process`，翻译变成 20 秒以上且拿不到正文。
+- **模型来源**：`llmEndpoint()` 统一决定往哪发——本地是 `http://127.0.0.1:<port>/v1/chat/completions`，云端是 `provider.baseURL + /chat/completions` 加 `Authorization: Bearer <key>`。`ensureReady()` 遇到云端直接跳过，不会去拉本地进程。
+- **关键参数**：请求里必须带 `chat_template_kwargs: { enable_thinking: false }`。这套 Qwen3.5 模板默认开思考链，不关的话会先吐一大段 `Thinking Process`，翻译变成 20 秒以上且拿不到正文。这个字段只有本地才带。
+- **远端 body 很挑**：必须带 `model`，而且多余字段会被 422。所以 `llmPayload()` 走到云端时只发 `model / messages / temperature / top_p / max_tokens / stream`，把 llama.cpp 那套 `repeat_penalty`、`chat_template_kwargs` 全剔掉。
 - **块怎么来**：后台把文本按标点切成 N 条，编号发给模型，要求同样编号逐行返回；流式解析每一行就是一块。模型漏行时会自动补一次请求。
 - **自然语言修改**：`/api/revise`。把当前所有译文编号发给模型，要求它**只输出改动过的行**（`【说明】`+`【改动】`+编号行），返回后按编号打补丁。这样模型不会顺手重写没让它动的块。
+- **释放显存**：`/api/release`。停掉子进程并把状态置为 `released`；`llamaStream` / `llamaOnce` 开头统一走 `ensureReady()`，发现模型不在就用上次的模型重新拉起（并发只拉一次），所以释放之后接着翻译不会报错，只是要多等一次加载。
 
 ## 配置
 
