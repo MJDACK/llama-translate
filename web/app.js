@@ -710,7 +710,7 @@ function renderChatLog() {
     .replace(/<think(?:ing)?>[\s\S]*$/i, '')
     .replace(/^\s*<\/think(?:ing)?>\s*/i, '')
     .trim();
-  box.innerHTML = msgs.map(m => {
+  box.innerHTML = msgs.map((m, idx) => {
     const who = m.role === 'assistant' ? '模型' : (m.role === 'system' ? '系统' : '我');
     const cls = m.role === 'assistant' ? 'assistant' : (m.role === 'system' ? 'system' : 'user');
     const list = Array.isArray(m.images) ? m.images : (m.image ? [m.image] : []);
@@ -723,9 +723,13 @@ function renderChatLog() {
     const body = waiting
       ? '<span class="dots"><i></i><i></i><i></i></span>'
       : (blank ? '<span class="blank">（这条没收到回复，重发一次试试）</span>' : esc(text));
-    return '<div class="cmsg ' + cls + (waiting ? ' waiting' : '') + '"><span class="who">' + who +
-      (m.sec ? ' · ' + m.sec + 's' : '') + '</span>' + thumbs +
-      '<div class="body">' + body + '</div></div>';
+    // 模型回复标题栏右侧给一个复制按钮
+    const copyBtn = (m.role === 'assistant' && !waiting && !blank)
+      ? '<button class="ccopy" data-i="' + idx + '" title="复制这条回复">复制</button>'
+      : '';
+    return '<div class="cmsg ' + cls + (waiting ? ' waiting' : '') + '">' +
+      '<div class="chead"><span class="who">' + who + (m.sec ? ' · ' + m.sec + 's' : '') + '</span>' + copyBtn + '</div>' +
+      thumbs + '<div class="body">' + body + '</div></div>';
   }).join('');
   box.scrollTop = box.scrollHeight;
 }
@@ -1703,6 +1707,22 @@ function bind() {
   $('#btnSysLoad').addEventListener('click', loadPromptFile);
   $('#sysPick').addEventListener('change', loadPromptFile);
   $('#sysText').addEventListener('input', saveLocal);
+
+  // 点气泡里的「复制」直接拷这条回复（思考已剥掉）
+  $('#cLog').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.ccopy');
+    if (!btn) return;
+    const i = Number(btn.dataset.i);
+    const m = (S.custom.messages || [])[i];
+    if (!m) return;
+    const text = String(m.content || '')
+      .replace(/<think(?:ing)?>[\s\S]*?<\/think(?:ing)?>/gi, '')
+      .replace(/<think(?:ing)?>[\s\S]*$/i, '')
+      .replace(/^\s*<\/think(?:ing)?>\s*/i, '')
+      .trim();
+    const ok = await copyText(text);
+    toast(ok ? '已复制 ' + text.length + ' 字' : '复制失败，手动选一下', 1800);
+  });
 
   const pickC = () => $('#cFile').click();
   $('#cDrop').addEventListener('click', pickC);

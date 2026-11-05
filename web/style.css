@@ -426,6 +426,15 @@ textarea:focus{border-color:var(--accent-dim);box-shadow:0 0 0 3px rgba(111,141,
 .dots i:nth-child(3){animation-delay:.36s}
 @keyframes dotPulse{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-2px)}}
 .blank{color:var(--dim2);font-style:italic}
+/* 每条模型回复标题栏右侧的复制按钮 */
+.chead{display:flex;align-items:center;gap:8px}
+.cmsg .ccopy{
+  margin-left:auto;opacity:.45;transition:.12s;
+  background:#1c2331;border:1px solid var(--line2);color:var(--dim);
+  border-radius:6px;font-size:10.5px;padding:2px 7px;cursor:pointer;font-family:inherit;
+}
+.cmsg:hover .ccopy,.ccopy:focus{opacity:1;border-color:var(--accent-dim);color:var(--txt)}
+.cdeep{font-size:12px}
 .chatbox.hide,.leftgrip.hide{display:none}
 
 .cdeep{margin-top:2px;font-size:12px}
