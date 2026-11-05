@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 /**
  * 提示词翻译台 —— llama.cpp 本地翻译 / 识图 工作台
  * 只依赖 Node 内置模块。负责：拉起 llama-server、切模型、中译英分块、识图。
@@ -1211,8 +1211,15 @@ async function handleGenerate(req, res, body) {
 /* 自定义系统提示词 + 对话                                              */
 /* ------------------------------------------------------------------ */
 function promptRoot() {
-  const dir = config.promptDir || 'E:\\comfyui\\ComfyUI-Image\\系统提示词';
+  const dir = config.promptDir || 'prompts';
   return path.isAbsolute(dir) ? dir : path.join(BASE, dir);
+}
+
+// 目录不存在就建一个，用户往里丢 .md 就能出现在下拉里
+function ensurePromptRoot() {
+  const root = promptRoot();
+  try { if (!fs.existsSync(root)) fs.mkdirSync(root, { recursive: true }); } catch (_) { }
+  return root;
 }
 
 // 只允许读 promptRoot 里面的文件，挡住 ../ 之类
@@ -1603,8 +1610,8 @@ const server = http.createServer(async (req, res) => {
 
     /* ---------------- 自定义系统提示词 + 对话（可带图） ---------------- */
     if (p === '/api/prompts' && req.method === 'GET') {
-      const root = promptRoot();
-      if (!fs.existsSync(root)) return json(res, 200, { root, list: [] });
+      const root = ensurePromptRoot();
+      if (!fs.existsSync(root)) return json(res, 200, { root, list: [], rel: path.relative(BASE, root) });
       const list = [];
       (function walk(dir) {
         for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -1620,7 +1627,7 @@ const server = http.createServer(async (req, res) => {
         }
       })(root);
       list.sort((a, b) => a.rel.localeCompare(b.rel, 'zh'));
-      return json(res, 200, { root, list });
+      return json(res, 200, { root, rel: path.relative(BASE, root).replace(/\\/g, '/'), list });
     }
 
     if (p === '/api/prompts/read' && req.method === 'GET') {

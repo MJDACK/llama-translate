@@ -4,7 +4,7 @@
   "attachPort": 8080,
   "appPort": 8787,
   "defaultModel": "qwen4b",
-  "promptDir": "E:\\comfyui\\ComfyUI-Image\\系统提示词",
+  "promptDir": "prompts",
   "openBrowser": false,
   "gen": {
     "temperature": 0.25,

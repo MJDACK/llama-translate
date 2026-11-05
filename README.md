@@ -142,7 +142,15 @@ csc /target:winexe /out:提示词翻译台.exe /win32icon:app.ico Launcher.cs
 
 **自定义页签**（第四个页签）：把任意一份系统提示词塞给模型，然后像聊天一样一轮一轮改。
 
-- 上面选一份 `.md` 点 `载入`（默认读 `config.json` 里的 `promptDir`，也就是 `E:\comfyui\ComfyUI-Image\系统提示词`，里面的 `文生图/system_prompt_t2i.md`、`图像编辑/system_prompt_edit.md` 都会自动列出来）；也可以直接在框里粘贴、改写。
+- 上面选一份 `.md` 点 `载入`。默认扫**程序目录下的 `prompts\`**（`config.json` 的 `promptDir`，相对路径按程序目录解析），现在里面是：
+
+  ```
+  prompts\
+    文生图\system_prompt_t2i.md
+    图像编辑\system_prompt_edit.md
+  ```
+
+  往里丢新的 `.md` / `.txt` 就会出现在下拉里，子目录名作为前缀（`图像编辑/system_prompt_edit`）。目录不存在会自动建。也可以在框里直接粘贴、改写。
 - 中间可以**一次拖/选多张图**（最多 8 张，缩略图可单张 ✕ 去掉），这一轮会连图一起发；发完自动清空。
 - 下面就是对话：Enter 发送、Shift+Enter 换行，多轮上下文自动带上（最多 20 轮），回复流式出字。
 - 发送后气泡里会显示跳动的点和已等秒数，发完标上「模型 · 2.6s」；按钮同时变成「发送中」。哪轮没收到东西会写「（这条没收到回复，重发一次试试）」，不会留个空白让人干等。
@@ -206,7 +214,7 @@ csc /target:winexe /out:提示词翻译台.exe /win32icon:app.ico Launcher.cs
   "port": 8085,          // 本程序自己拉起的服务端口
   "attachPort": 8080,    // 启动时先看这个口有没有现成的 llama-server，有就直接用
   "appPort": 8787,       // 界面端口
-  "promptDir": "E:\\comfyui\\ComfyUI-Image\\系统提示词",  // 「自定义」页签列提示词文件的目录
+  "promptDir": "prompts",  // 「自定义」页签扫这个目录（相对本程序目录），子目录会作为前缀
   "defaultModel": "qwen4b",
   "openBrowser": false,   // 是否自动打开浏览器（默认关）
   "gen": { "temperature": 0.25, "top_p": 0.9, "repeat_penalty": 1.05, "max_tokens": 2048 },
