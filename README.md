@@ -172,6 +172,7 @@ csc /target:winexe /out:提示词翻译台.exe /win32icon:app.ico Launcher.cs
 | 其它 MaaS（GLM / Kimi / MiniMax） | 同上 | glm-5~5.3、kimi-k2.5/2.6/2.7-code、MiniMax-M2.5 |
 | 月之暗面 Kimi（官方） | `https://api.moonshot.cn/v1` | kimi-k2-0905-preview 等 |
 | 硅基流动 / OpenRouter / OpenAI | 各自官方地址 | — |
+| MiniMax | `https://api.minimaxi.com/v1` | `MiniMax-M2`、`MiniMax-M2.5`、`abab6.5s-chat`、`MiniMax-Text-01`；海外站换 `https://api.minimax.io/v1` |
 | 自定义（OpenAI 兼容） | 自己填 | LM Studio、Ollama、内网网关都能用 |
 
 后三个 MaaS 入口地址相同、**密钥只填一次**（同一个网关的 key 会自动共享）。

@@ -159,6 +159,15 @@ const PROVIDER_PRESETS = [
     models: ['gpt-4o-mini', 'gpt-4o'], vision: true
   },
   {
+    // 官方 OpenAI 兼容口就是 /v1/chat/completions（已探测：无 key 返回 401 authorized_error）。
+    // 海外站把地址换成 https://api.minimax.io/v1 即可。这家的 /v1/models 是 404，
+    // 「刷新模型」拿不到列表，模型名手填。
+    id: 'minimax', name: 'MiniMax',
+    baseURL: 'https://api.minimaxi.com/v1',
+    models: ['MiniMax-M2', 'MiniMax-M2.5', 'abab6.5s-chat', 'MiniMax-Text-01'],
+    vision: false
+  },
+  {
     id: 'custom', name: '自定义（OpenAI 兼容）', baseURL: 'http://127.0.0.1:1234/v1',
     models: [''], vision: false
   }
@@ -167,7 +176,7 @@ const PROVIDER_PRESETS = [
 // providers.json: { active: 'local' | <id>, list: [{ id, name, baseURL, apiKey, model, vision }] }
 let providers = { active: 'local', list: [] };
 
-const PROVIDERS_SCHEMA = 6;   // 换了预置清单就 +1，旧的 providers.json 会自动升级（密钥保留）
+const PROVIDERS_SCHEMA = 7;   // 换了预置清单就 +1，旧的 providers.json 会自动升级（密钥保留）
 
 function loadProviders() {
   let saved = null;
@@ -1496,7 +1505,12 @@ const server = http.createServer(async (req, res) => {
       if (pv.apiKey) headers.Authorization = `Bearer ${pv.apiKey}`;
       try {
         const r = await fetch(`${base}/models`, { headers, signal: AbortSignal.timeout(15000) });
-        if (!r.ok) return json(res, 200, { ok: false, reason: `取模型列表失败（${r.status}）`, status: r.status });
+        if (!r.ok) {
+          const why = r.status === 404
+            ? "这家不提供 /models 列表（MiniMax 就是这样），模型名直接在输入框里手填"
+            : `取模型列表失败（${r.status}）`;
+          return json(res, 200, { ok: false, reason: why, status: r.status });
+        }
         const j = await r.json();
         const ids = (Array.isArray(j?.data) ? j.data : []).map(x => x && x.id).filter(Boolean).sort();
         if (ids.length) {
