@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>提示词翻译台 · llama.cpp</title>
-<link rel="stylesheet" href="style.css?v=30">
+<link rel="stylesheet" href="style.css?v=32">
 </head>
 <body>
 
@@ -120,6 +120,9 @@
         <textarea id="cInput" spellcheck="false" placeholder="说要什么，Enter 发送，Shift + Enter 换行"></textarea>
         <button class="btn primary" id="btnCSend">发送 <span class="arr">→</span></button>
       </div>
+      <label class="pchk cdeep" title="开：让模型先想再答（约 40 秒，细节最足）；关：快 5~8 秒，但描述会略简">
+        <input type="checkbox" id="cDeep" checked><span>深度思考（慢但细节足）</span>
+      </label>
     </div>
 
     <div class="leftgrip" id="leftGrip" title="拖动调整上下高度，双击复位"></div>
@@ -248,6 +251,6 @@
 </aside>
 
 <div class="toast" id="toast" hidden></div>
-<script src="app.js?v=30"></script>
+<script src="app.js?v=32"></script>
 </body>
 </html>

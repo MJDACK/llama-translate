@@ -94,6 +94,7 @@ const saveLocal = debounce(() => {
       imgSize: S.imgSize,
       imgMode: S.imgMode,
       sysText: $('#sysText') ? $('#sysText').value : (S.custom && S.custom.system) || '',
+      cDeep: $('#cDeep') ? $('#cDeep').checked : true,
       chatMsgs: ((S.custom && S.custom.messages) || []).map(m => ({ role: m.role, content: m.content })),
       outH: outHeight,
       chatH: chatH,
@@ -124,6 +125,7 @@ function restoreLocal() {
     if (d.imgSize) S.imgSize = d.imgSize;
     if (d.imgMode) S.imgMode = d.imgMode;
     if (typeof d.sysText === 'string' && $('#sysText')) $('#sysText').value = d.sysText;
+    if (typeof d.cDeep === 'boolean' && $('#cDeep')) $('#cDeep').checked = d.cDeep;
     if (Array.isArray(d.chatMsgs)) {
       S.custom = S.custom || { system: '', messages: [], images: [] };
       S.custom.messages = d.chatMsgs
@@ -702,6 +704,12 @@ function renderChatLog() {
     box.innerHTML = '<div class="clogEmpty">选一份系统提示词（或自己写），下面说要求。<br>可以带图，一轮一轮改。</div>';
     return;
   }
+  // 历史里可能存着带 <think>…</think> 的旧回复，显示时也剥掉
+  const strip = (s) => String(s || '')
+    .replace(/<think(?:ing)?>[\s\S]*?<\/think(?:ing)?>/gi, '')
+    .replace(/<think(?:ing)?>[\s\S]*$/i, '')
+    .replace(/^\s*<\/think(?:ing)?>\s*/i, '')
+    .trim();
   box.innerHTML = msgs.map(m => {
     const who = m.role === 'assistant' ? '模型' : (m.role === 'system' ? '系统' : '我');
     const cls = m.role === 'assistant' ? 'assistant' : (m.role === 'system' ? 'system' : 'user');
@@ -709,11 +717,12 @@ function renderChatLog() {
     const thumbs = list.length
       ? '<div class="thumbs">' + list.map(src => '<img src="' + src + '" alt="">').join('') + '</div>'
       : '';
-    const waiting = m.role === 'assistant' && m.live && !String(m.content || '').trim();
-    const blank = m.role === 'assistant' && !m.live && !String(m.content || '').trim();
+    const text = m.role === 'assistant' ? strip(m.content) : String(m.content || '');
+    const waiting = m.role === 'assistant' && m.live && !text.trim();
+    const blank = m.role === 'assistant' && !m.live && !text.trim();
     const body = waiting
       ? '<span class="dots"><i></i><i></i><i></i></span>'
-      : (blank ? '<span class="blank">（这条没收到回复，重发一次试试）</span>' : esc(m.content || ''));
+      : (blank ? '<span class="blank">（这条没收到回复，重发一次试试）</span>' : esc(text));
     return '<div class="cmsg ' + cls + (waiting ? ' waiting' : '') + '"><span class="who">' + who +
       (m.sec ? ' · ' + m.sec + 's' : '') + '</span>' + thumbs +
       '<div class="body">' + body + '</div></div>';
@@ -773,6 +782,8 @@ async function sendCustom() {
 
   S.custom.system = sys;
   const imgs = (S.custom.images || []).slice();
+  const deep = $('#cDeep') ? $('#cDeep').checked : true;
+  S.custom.deep = deep;
   const totalKb = Math.round(imgs.reduce((n, d) => n + d.length * 0.75, 0) / 1024);
   const userMsg = { role: 'user', content: text, images: imgs };
   S.custom.messages.push(userMsg);
@@ -807,7 +818,7 @@ async function sendCustom() {
         system: sys,
         messages: S.custom.messages.filter(m => m !== holder).map(m => ({ role: m.role, content: m.content })),
         images: imgs,
-        maxTokens: 1600,
+        deep,
         temperature: 0.7
       },
       {

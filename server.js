@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 /**
  * 提示词翻译台 —— llama.cpp 本地翻译 / 识图 工作台
  * 只依赖 Node 内置模块。负责：拉起 llama-server、切模型、中译英分块、识图。
@@ -283,11 +283,19 @@ function llmPayload(extra) {
     max_tokens: extra.max_tokens
   };
   if (extra.stream !== undefined) out.stream = extra.stream;
-  // 这类模型会先吐一大段 reasoning_content，把 max_tokens 吃光、正文为空
-  // （DeepSeek 上实测：finish_reason=length + content 空）。关掉思考。
-  if (/deepseek\.com$/i.test((() => { try { return new URL(p.baseURL).host; } catch (_) { return ''; } })())) {
+  // 这类模型会先吐一大段思考，把 max_tokens 吃光、正文为空（DeepSeek 上是
+  // reasoning_content + finish=length；MiniMax-M3 更麻烦，思考直接塞进 content
+  // 的 <think>…</think> 里）。
+  //   deep=on  → 不传参数，用服务端默认（会思考，慢但细）
+  //   deep=off → thinking:{type:'disabled'}
+  const host = (() => { try { return new URL(p.baseURL).host.toLowerCase(); } catch (_) { return ''; } })();
+  const thinks = /(^|\.)deepseek\.com$/.test(host) || host.endsWith('minimax.io') || host.endsWith('minimaxi.com');
+  if (thinks && !extra.deep) {
+    // 注意：只传 disabled。传 enabled 会被 MiniMax 判 400（invalid thinking），
+    // 想让它思考就干脆不传这个字段，用服务端默认。
     out.thinking = { type: 'disabled' };
   }
+  delete out.deep;
   return out;
 }
 
@@ -818,7 +826,8 @@ async function llamaStream(messages, opts, onDelta, signal) {
     temperature: opts.temperature ?? config.gen.temperature,
     top_p: opts.top_p ?? config.gen.top_p,
     repeat_penalty: opts.repeat_penalty ?? config.gen.repeat_penalty,
-    max_tokens: opts.max_tokens ?? config.gen.max_tokens
+    max_tokens: opts.max_tokens ?? config.gen.max_tokens,
+    deep: !!opts.deep
   });
   const ep = llmEndpoint();
   let r;
@@ -839,6 +848,7 @@ async function llamaStream(messages, opts, onDelta, signal) {
   const dec = new TextDecoder();
   let buf = '';
   let full = '';
+  let rawAll = '';       // 模型原始输出（可能含 <think>…</think>）
   llamaStream.finish = '';
   llamaStream.reasoning = '';
   while (true) {
@@ -858,10 +868,30 @@ async function llamaStream(messages, opts, onDelta, signal) {
       const d = ch?.delta?.content;
       if (ch?.delta?.reasoning_content) llamaStream.reasoning += ch.delta.reasoning_content;
       if (ch?.finish_reason) llamaStream.finish = ch.finish_reason;
-      if (d) { full += d; onDelta && onDelta(d, full); }
+      if (d) {
+        rawAll += d;
+        // MiniMax-M3 这类模型会把思考直接写进 content 的 <think>…</think> 里，
+        // 原样透出去就是「只有思考、没有答案」。这里边流边剥。
+        const vis = stripThink(rawAll);
+        if (vis.length > full.length) {
+          const add = vis.slice(full.length);
+          full = vis;
+          onDelta && onDelta(add, full);
+        }
+      }
     }
   }
   return full;
+}
+
+// 去掉 <think>…</think>（含未闭合的尾巴）和开头孤零零的 <｜end▁of▁thinking｜>
+function stripThink(s) {
+  let out = String(s || '');
+  out = out.replace(/<think(?:ing)?>[\s\S]*?<\/think(?:ing)?>/gi, '');
+  const open = out.search(/<think(?:ing)?>/i);
+  if (open >= 0) out = out.slice(0, open);
+  out = out.replace(/^\s*<\/think(?:ing)?>\s*/i, '');
+  return out;
 }
 
 async function llamaOnce(messages, opts = {}) {
@@ -872,7 +902,8 @@ async function llamaOnce(messages, opts = {}) {
     temperature: opts.temperature ?? config.gen.temperature,
     top_p: opts.top_p ?? config.gen.top_p,
     repeat_penalty: opts.repeat_penalty ?? config.gen.repeat_penalty,
-    max_tokens: opts.max_tokens ?? config.gen.max_tokens
+    max_tokens: opts.max_tokens ?? config.gen.max_tokens,
+    deep: !!opts.deep
   });
   const ep = llmEndpoint();
   let r;
@@ -1287,9 +1318,12 @@ async function handleChat(req, res, body) {
   });
 
   try {
+    const deep = body.deep === true;
     const out = await llamaStream(msgs, {
-      max_tokens: Math.min(8192, Number(body.maxTokens) || 3000),
-      temperature: Number(body.temperature) || 0.7
+      // 深度思考会先烧掉几千 token，额度给足，别又切成半截
+      max_tokens: Math.min(16384, Number(body.maxTokens) || (deep ? 8000 : 3000)),
+      temperature: Number(body.temperature) || 0.7,
+      deep
     }, (delta, full) => io.send('delta', { text: full }), ctrl.signal);
     const clean = out.trim();
     if (!clean) {

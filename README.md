@@ -154,6 +154,7 @@ csc /target:winexe /out:提示词翻译台.exe /win32icon:app.ico Launcher.cs
 - 中间可以**一次拖/选多张图**（最多 8 张，缩略图可单张 ✕ 去掉），这一轮会连图一起发；发完自动清空。
 - 下面就是对话：Enter 发送、Shift+Enter 换行，多轮上下文自动带上（最多 20 轮），回复流式出字。
 - 发送后气泡里会显示跳动的点和已等秒数，发完标上「模型 · 2.6s」；按钮同时变成「发送中」。哪轮没收到东西会写「（这条没收到回复，重发一次试试）」，不会留个空白让人干等。
+- 底部有 **深度思考** 开关（默认开）：开时模型先想再答，约 25~45 秒但细节最足；关掉 3~8 秒出结果，描述会略简。DeepSeek / MiniMax 这类会把思考写进正文的模型，思考过程会被自动剥掉，只显示答案。
 - 系统提示词只存在浏览器 localStorage 里，对话记录也是（`清空对话` 只清消息，不动提示词）。
 - 每轮请求就是 `system(你的提示词) + 历史 + 本轮用户消息(+图)`，没加任何私货。
 
@@ -209,7 +210,7 @@ csc /target:winexe /out:提示词翻译台.exe /win32icon:app.ico Launcher.cs
 - **关键参数**：请求里必须带 `chat_template_kwargs: { enable_thinking: false }`。这套 Qwen3.5 模板默认开思考链，不关的话会先吐一大段 `Thinking Process`，翻译变成 20 秒以上且拿不到正文。这个字段只有本地才带。
 - **远端 body 很挑**：必须带 `model`，而且多余字段会被 422。所以 `llmPayload()` 走到云端时只发 `model / messages / temperature / top_p / max_tokens / stream`，把 llama.cpp 那套 `repeat_penalty`、`chat_template_kwargs` 全剔掉。
 - **自定义提示词**：`GET /api/prompts`（列 `promptDir` 下的 .md/.txt）、`GET /api/prompts/read?path=`（带目录穿越防护）、`POST /api/chat`（SSE，`{system, messages, images}`，最后一条 user 消息带图就拼成多模态数组）。
-- **思考链要关掉**：DeepSeek 这类模型会先吐一大段 `reasoning_content`，把 `max_tokens` 吃光之后 `content` 是空的（实测 `finish_reason=length` + 正文 0 字，看着就像「没有反应」）。所以走 `api.deepseek.com` 时 body 会带 `thinking: { type: "disabled" }`；chat 默认额度也放宽到 3000。真空回复会把 `finish_reason` 和 reasoning 字数一起报出来。
+- **思考链要关掉**：DeepSeek 这类模型会先吐一大段 `reasoning_content`，把 `max_tokens` 吃光之后 `content` 是空的（实测 `finish_reason=length` + 正文 0 字，看着就像「没有反应」）。**MiniMax-M3 更隐蔽：思考直接写在 `content` 的 `<think>…</think>` 里**，不处理就会看到满屏思考、没有答案。处理方式：走 deepseek / minimax 域名时，快速模式带 `thinking:{type:"disabled"}`；深度模式**不传这个字段**（传 `enabled` 会被 MiniMax 判 400）；流式输出统一走 `stripThink()` 边流边剥 `<think>`，历史消息显示时也剥一遍。chat 额度：快速 3000、深度 8000。
 - **图别太大**：base64 超过约 2 MB 时 DeepSeek 会静默返回空。前端 `shrinkToLimit()` 把每张压到 900 KB 字符以内（先缩到 768，再逐步降质量/尺寸）。
 - **块怎么来**：后台把文本按标点切成 N 条，编号发给模型，要求同样编号逐行返回；流式解析每一行就是一块。模型漏行时会自动补一次请求。
 - **自然语言修改**：`/api/revise`。把当前所有译文编号发给模型，要求它**只输出改动过的行**（`【说明】`+`【改动】`+编号行），返回后按编号打补丁。这样模型不会顺手重写没让它动的块。

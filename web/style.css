@@ -427,3 +427,5 @@ textarea:focus{border-color:var(--accent-dim);box-shadow:0 0 0 3px rgba(111,141,
 @keyframes dotPulse{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-2px)}}
 .blank{color:var(--dim2);font-style:italic}
 .chatbox.hide,.leftgrip.hide{display:none}
+
+.cdeep{margin-top:2px;font-size:12px}
