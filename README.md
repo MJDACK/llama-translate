@@ -172,10 +172,20 @@ csc /target:winexe /out:提示词翻译台.exe /win32icon:app.ico Launcher.cs
 | 其它 MaaS（GLM / Kimi / MiniMax） | 同上 | glm-5~5.3、kimi-k2.5/2.6/2.7-code、MiniMax-M2.5 |
 | 月之暗面 Kimi（官方） | `https://api.moonshot.cn/v1` | kimi-k2-0905-preview 等 |
 | 硅基流动 / OpenRouter / OpenAI | 各自官方地址 | — |
-| MiniMax | `https://api.minimaxi.com/v1` | `MiniMax-M2`、`MiniMax-M2.5`、`abab6.5s-chat`、`MiniMax-Text-01`；海外站换 `https://api.minimax.io/v1` |
+| MiniMax（开放平台） | `https://api.minimaxi.com/v1` | `MiniMax-M3.1-Flash`、`MiniMax-M2`、`MiniMax-M2.5`、`MiniMax-Text-01` |
+| MiniMax M Plan（订阅） | `https://api.minimax.io/v1` | 只有 `MiniMax-M3.1-Flash`（旧的 `-Preview` 已退役，会被服务端转到正式名） |
 | 自定义（OpenAI 兼容） | 自己填 | LM Studio、Ollama、内网网关都能用 |
 
 后三个 MaaS 入口地址相同、**密钥只填一次**（同一个网关的 key 会自动共享）。
+
+**关于 MiniMax 的两套接入**（原文见 [M Plan 文档](https://platform.minimax.io/docs/token-plan)、[OpenAI SDK 说明](https://platform.minimaxi.com/docs/api-reference/text-openai-api)）：
+
+- **按量付费 API key** → `https://api.minimaxi.com/v1`（国内）或 `https://api.minimax.io/v1`（海外），模型自选。
+- **M Plan 订阅 key** → 只能用套餐额度，**跟按量付费的 key 不通用**；官方给第三方工具的标准是
+  `ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic`（Anthropic 协议，Claude Code / Cursor 那类），
+  OpenAI 协议则用 `https://api.minimax.io/v1`。本程序走 OpenAI 协议，所以选「MiniMax M Plan」那条。
+- M Plan 三档：Go（1× 额度）/ Explore（3×，含 H3 视频）/ Build（7.5×）。文本模型统一 `MiniMax-M3.1-Flash`。
+- 这家的 `/v1/models` 是 404，模型名必须手填，`刷新模型` 会明确告诉你。两个域名我都探过，`/chat/completions` 都在，无 key 时返回同样的 `401 authorized_error`。
 
 注意：`deepseek-v4.1-flash` 是千问 MaaS 那边的模型，**不在 `api.deepseek.com` 上**——官方只给 `deepseek-flash` 和 `deepseek-v4-pro`。两个平台的 key 也不通用，填错会 401。
 

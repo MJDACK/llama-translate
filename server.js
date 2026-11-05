@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 /**
  * 提示词翻译台 —— llama.cpp 本地翻译 / 识图 工作台
  * 只依赖 Node 内置模块。负责：拉起 llama-server、切模型、中译英分块、识图。
@@ -160,11 +160,18 @@ const PROVIDER_PRESETS = [
   },
   {
     // 官方 OpenAI 兼容口就是 /v1/chat/completions（已探测：无 key 返回 401 authorized_error）。
-    // 海外站把地址换成 https://api.minimax.io/v1 即可。这家的 /v1/models 是 404，
-    // 「刷新模型」拿不到列表，模型名手填。
-    id: 'minimax', name: 'MiniMax',
+    // 这家的 /v1/models 是 404，「刷新模型」拿不到列表，模型名手填。
+    id: 'minimax', name: 'MiniMax（开放平台 · 国内）',
     baseURL: 'https://api.minimaxi.com/v1',
-    models: ['MiniMax-M2', 'MiniMax-M2.5', 'abab6.5s-chat', 'MiniMax-Text-01'],
+    models: ['MiniMax-M3.1-Flash', 'MiniMax-M2', 'MiniMax-M2.5', 'MiniMax-Text-01'],
+    vision: false
+  },
+  {
+    // M Plan（订阅套餐）的 key 只走套餐额度，跟按量付费的 API key 不通用。
+    // 官方给第三方工具的是 api.minimax.io：Anthropic 协议在 /anthropic，OpenAI 协议在 /v1。
+    id: 'minimax-plan', name: 'MiniMax M Plan（订阅 · 海外）',
+    baseURL: 'https://api.minimax.io/v1',
+    models: ['MiniMax-M3.1-Flash'],
     vision: false
   },
   {
@@ -176,7 +183,7 @@ const PROVIDER_PRESETS = [
 // providers.json: { active: 'local' | <id>, list: [{ id, name, baseURL, apiKey, model, vision }] }
 let providers = { active: 'local', list: [] };
 
-const PROVIDERS_SCHEMA = 7;   // 换了预置清单就 +1，旧的 providers.json 会自动升级（密钥保留）
+const PROVIDERS_SCHEMA = 8;   // 换了预置清单就 +1，旧的 providers.json 会自动升级（密钥保留）
 
 function loadProviders() {
   let saved = null;
