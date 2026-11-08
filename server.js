@@ -568,6 +568,41 @@ async function switchModel(id) {
   return launchModel(m);
 }
 
+// 把 config.json 写回去（保持 2 空格缩进，写前留一份 .bak）
+function saveConfig() {
+  try {
+    fs.copyFileSync(CONFIG_FILE, CONFIG_FILE + '.bak');
+  } catch (_) { }
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2) + '\n', 'utf8');
+}
+
+// 改 -c / -ngl：写盘 → 如果当前就是本地这个模型，重新拉一次让参数生效
+async function applyModelParams(id, patch) {
+  const m = modelById(id);
+  if (!m) throw new Error('未知模型 ' + id);
+  const ctx = patch.ctx === undefined ? m.ctx : Number(patch.ctx);
+  const ngl = patch.ngl === undefined ? m.ngl : Number(patch.ngl);
+  if (!Number.isInteger(ctx) || ctx < 1024 || ctx > 131072) {
+    throw new Error('-c 要在 1024 ~ 131072 之间（现在填的是 ' + patch.ctx + '）');
+  }
+  if (!Number.isInteger(ngl) || ngl < 0 || ngl > 999) {
+    throw new Error('-ngl 要在 0 ~ 999 之间（99 表示全部放显卡）');
+  }
+  m.ctx = ctx;
+  if (patch.ngl !== undefined) m.ngl = ngl;
+  saveConfig();
+  log(`模型 ${id}：-c ${ctx} -ngl ${m.ngl}，已写入 config.json`);
+  // 本地正跑着这个模型 → 重载一次
+  const running = !isRemote() && !state.attached && (state.modelId || config.defaultModel) === id;
+  if (running) {
+    try { await stopChild(); } catch (_) { }
+    state.status = 'loading';
+    state.message = `按新的 -c ${ctx} 重新加载 ${m.name}…`;
+    launchModel(m).catch(() => { });
+  }
+  return { model: m, reloaded: running };
+}
+
 async function bootServer() {
   if (config.openBrowser !== false) { /* 浏览器在 listen 之后再开 */ }
 
@@ -1257,6 +1292,15 @@ async function handleGenerate(req, res, body) {
 /* ------------------------------------------------------------------ */
 /* 自定义系统提示词 + 对话                                              */
 /* ------------------------------------------------------------------ */
+// 粗估 token：中日韩字符按 1 个 token，其余按 3.5 字符 1 个（偏保守）
+function estTokens(s) {
+  const str = String(s || '');
+  let cjk = 0, other = 0;
+  for (const ch of str) {
+    if (/[\u3000-\u9fff\uac00-\ud7af\uff00-\uffef]/.test(ch)) cjk++; else other++;
+  }
+  return Math.ceil(cjk * 1.1 + other / 3.5);
+}
 function promptRoot() {
   const dir = config.promptDir || 'prompts';
   return path.isAbsolute(dir) ? dir : path.join(BASE, dir);
@@ -1309,12 +1353,43 @@ async function handleChat(req, res, body) {
     }
   }
 
+  // ---- 本地模型先算一下装不装得下，装不下就砍历史、再不行就好好说 ----
+  let trimmedTurns = 0;
+  if (!isRemote()) {
+    const model = modelById(state.modelId || config.defaultModel) || config.models[0];
+    const ctx = Number(model.ctx) || 8192;
+    const outWant = Math.min(Number(body.maxTokens) || 2048, 2048);
+    const budget = Math.max(512, ctx - outWant - 64);
+    const imgTokens = images.length * 1200;          // 本地视觉编码器一张图大约这个量级
+    const total = () => estTokens(JSON.stringify(msgs.map(m =>
+      typeof m.content === 'string' ? m.content : (m.content.find?.(c => c.type === 'text')?.text || '')
+    ))) + imgTokens;
+    // 从最老的一轮开始丢，直到装得下（system 和最后一轮用户消息绝不丢）
+    while (total() > budget && msgs.length > 2) {
+      msgs.splice(1, 1);                               // 丢最老的
+      if (msgs.length > 2 && msgs[1] && msgs[1].role === 'assistant') msgs.splice(1, 1);
+      trimmedTurns++;
+    }
+    const need = total();
+    if (need > budget) {
+      const hint = images.length
+        ? '先把图去掉 / 少几张，或者 '
+        : '';
+      const suggest = Math.min(32768, Math.ceil((need + outWant + 256) / 1024) * 1024);
+      return json(res, 413, {
+        error: `本地模型上下文不够：这次约 ${need} tokens，可用只有 ${ctx}（还要给回答留 ${outWant}）。` +
+          `${hint}把 config.json 里这个模型的 "ctx" 改成 ${suggest}，或者换成云端模型（API 里选 MiniMax / DeepSeek）。`
+      });
+    }
+  }
+
   const io = sseOpen(res);
   const ctrl = new AbortController();
   res.on('close', () => { if (!res.writableEnded) ctrl.abort(); });
   io.send('start', {
     model: isRemote() ? `${activeProvider().name} · ${activeProvider().model}` : state.modelAlias,
-    images: images.length
+    images: images.length,
+    trimmed: trimmedTurns
   });
 
   try {
@@ -1602,6 +1677,35 @@ const server = http.createServer(async (req, res) => {
         return json(res, 200, { ok: true, ms: Date.now() - t0, models: modelsCount });
       } catch (e) {
         return json(res, 200, { ok: false, reason: '连不上：' + e.message });
+      }
+    }
+
+    if (p === '/api/settings' && req.method === 'GET') {
+      return json(res, 200, {
+        models: config.models.map(m => ({
+          id: m.id, name: m.name, ctx: m.ctx || 8192, ngl: m.ngl ?? 99,
+          file: path.basename(m.model), vision: !!m.mmproj
+        })),
+        currentId: isRemote() ? null : (state.modelId || config.defaultModel),
+        active: providers.active,
+        remote: isRemote(),
+        attached: !!state.attached
+      });
+    }
+
+    if (p === '/api/settings' && req.method === 'POST') {
+      const body = JSON.parse(await readBody(req) || '{}');
+      try {
+        if (state.attached) return json(res, 409, { error: '当前接的是外部 llama-server，改 -c 得去改那边的启动参数' });
+        const r = await applyModelParams(String(body.id || ''), body);
+        return json(res, 200, {
+          ok: true,
+          id: r.model.id, ctx: r.model.ctx, ngl: r.model.ngl,
+          reloaded: r.reloaded,
+          message: r.reloaded ? `已改成 -c ${r.model.ctx}，正在重新加载模型…` : `已保存 -c ${r.model.ctx}（下次启动这个模型时生效）`
+        });
+      } catch (e) {
+        return json(res, 400, { error: e.message });
       }
     }
 

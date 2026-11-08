@@ -1596,6 +1596,81 @@ function bind() {
     }
   });
 
+  /* ---- 本地模型参数抽屉（-c / -ngl） ---- */
+  let S_SETTINGS = null;
+
+  async function loadSettings() {
+    const r = await fetch('/api/settings');
+    S_SETTINGS = await r.json();
+    const sel = $('#sModel');
+    sel.innerHTML = S_SETTINGS.models.map(m =>
+      '<option value="' + m.id + '">' + esc(m.name) + '</option>').join('');
+    const cur = S_SETTINGS.currentId || (S_SETTINGS.models[0] && S_SETTINGS.models[0].id);
+    if (cur) sel.value = cur;
+    $('#sCur').textContent = S_SETTINGS.remote ? '当前用云端，改完下次用本地时生效'
+      : (S_SETTINGS.attached ? '外部服务，改不了' : '本地 llama.cpp');
+    fillSettingsForm(sel.value);
+  }
+
+  function fillSettingsForm(id) {
+    if (!S_SETTINGS) return;
+    const m = S_SETTINGS.models.find(x => x.id === id) || S_SETTINGS.models[0];
+    if (!m) return;
+    $('#sCtx').value = m.ctx;
+    $('#sNgl').value = m.ngl;
+    $('#sCtxPreset').innerHTML = [8192, 16384, 24576, 32768].map(v =>
+      '<button class="btn sm' + (v === m.ctx ? ' primary' : '') + '" data-ctx="' + v + '">' + (v / 1024) + 'k</button>'
+    ).join('');
+    $('#sHint').className = 'phint';
+    $('#sHint').textContent = m.file + (m.vision ? ' · 带视觉' : '') + ' · 当前 -c ' + m.ctx + ' -ngl ' + m.ngl;
+  }
+
+  $('#btnSettings').addEventListener('click', async () => {
+    $('#sdrawer').hidden = false;
+    try { await loadSettings(); } catch (e) { $('#sHint').className = 'phint bad'; $('#sHint').textContent = '读设置失败：' + e.message; }
+  });
+  $('#btnCloseSettings').addEventListener('click', () => { $('#sdrawer').hidden = true; });
+  $('#sModel').addEventListener('change', (e) => fillSettingsForm(e.target.value));
+  $('#sReset').addEventListener('click', () => fillSettingsForm($('#sModel').value));
+  $('#sCtxPreset').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-ctx]');
+    if (b) $('#sCtx').value = b.dataset.ctx;
+  });
+
+  $('#sSave').addEventListener('click', async () => {
+    const id = $('#sModel').value;
+    const ctx = Number($('#sCtx').value);
+    const ngl = Number($('#sNgl').value);
+    $('#sHint').className = 'phint';
+    $('#sHint').textContent = '保存中…';
+    try {
+      const r = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, ctx, ngl })
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+      $('#sHint').className = 'phint ok';
+      $('#sHint').textContent = j.message;
+      toast(j.message, 4000);
+      await loadSettings();
+      if (j.reloaded) {
+        for (let i = 0; i < 40; i++) {
+          await new Promise(res => setTimeout(res, 1500));
+          await refreshStatus();
+          if (S.server && (S.server.status === 'ready' || S.server.status === 'error')) break;
+        }
+      } else {
+        await refreshStatus();
+      }
+    } catch (e) {
+      $('#sHint').className = 'phint bad';
+      $('#sHint').textContent = '保存失败：' + e.message;
+      toast('保存失败：' + e.message, 5000);
+    }
+  });
+
   /* ---- 模型来源抽屉 ---- */
   $('#btnProvider').addEventListener('click', async () => {
     $('#pdrawer').hidden = false;
