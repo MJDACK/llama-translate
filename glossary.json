@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "categories": [
     {
       "id": "quality",
@@ -39,6 +39,51 @@
     {
       "id": "format",
       "name": "画幅 / 用途",
+      "enabled": false
+    },
+    {
+      "id": "artist",
+      "name": "画师风格",
+      "enabled": false
+    },
+    {
+      "id": "pose",
+      "name": "姿势动作",
+      "enabled": false
+    },
+    {
+      "id": "expression",
+      "name": "表情",
+      "enabled": false
+    },
+    {
+      "id": "hair",
+      "name": "发型发色",
+      "enabled": false
+    },
+    {
+      "id": "face",
+      "name": "面部特征",
+      "enabled": false
+    },
+    {
+      "id": "outfit",
+      "name": "服饰",
+      "enabled": false
+    },
+    {
+      "id": "prop",
+      "name": "道具",
+      "enabled": false
+    },
+    {
+      "id": "weather",
+      "name": "天气",
+      "enabled": false
+    },
+    {
+      "id": "negative",
+      "name": "负面词",
       "enabled": false
     }
   ],
@@ -1224,6 +1269,3320 @@
     {
       "zh": "16:9",
       "en": "16:9 aspect ratio",
+      "cat": "format"
+    },
+    {
+      "zh": "评分九分",
+      "en": "score_9",
+      "cat": "quality",
+      "note": "Pony / NoobAI 系专用质量词，只能和同类模型配"
+    },
+    {
+      "zh": "评分八分以上",
+      "en": "score_8_up",
+      "cat": "quality",
+      "note": "Pony 系递进质量词，别和 score_9 堆三层"
+    },
+    {
+      "zh": "评分七分以上",
+      "en": "score_7_up",
+      "cat": "quality",
+      "note": "Pony 系基础质量词"
+    },
+    {
+      "zh": "评分六分以上",
+      "en": "score_6_up",
+      "cat": "quality"
+    },
+    {
+      "zh": "评分五分以上",
+      "en": "score_5_up",
+      "cat": "quality"
+    },
+    {
+      "zh": "评分四分以上",
+      "en": "score_4_up",
+      "cat": "quality",
+      "note": "通常放负面"
+    },
+    {
+      "zh": "超高分辨率",
+      "en": "absurdres",
+      "cat": "quality",
+      "note": "Danbooru 分辨率标签，配合高分辨率出图"
+    },
+    {
+      "zh": "高分辨率",
+      "en": "highres",
+      "cat": "quality"
+    },
+    {
+      "zh": "低分辨率",
+      "en": "lowres",
+      "cat": "quality",
+      "note": "放负面比放正面有用"
+    },
+    {
+      "zh": "最新版本",
+      "en": "newest",
+      "cat": "quality",
+      "note": "Danbooru 时间标签，偏向新画风"
+    },
+    {
+      "zh": "近期作品",
+      "en": "recent",
+      "cat": "quality"
+    },
+    {
+      "zh": "中期作品",
+      "en": "mid",
+      "cat": "quality"
+    },
+    {
+      "zh": "早期作品",
+      "en": "old",
+      "cat": "quality",
+      "note": "老画风，线条粗、上色旧"
+    },
+    {
+      "zh": "最早期作品",
+      "en": "early",
+      "cat": "quality"
+    },
+    {
+      "zh": "安全级",
+      "en": "safe",
+      "cat": "quality",
+      "note": "给模型的分级标签，写实向别乱加"
+    },
+    {
+      "zh": "敏感级",
+      "en": "sensitive",
+      "cat": "quality"
+    },
+    {
+      "zh": "争议级",
+      "en": "questionable",
+      "cat": "quality"
+    },
+    {
+      "zh": "限制级",
+      "en": "explicit",
+      "cat": "quality"
+    },
+    {
+      "zh": "成人内容",
+      "en": "nsfw",
+      "cat": "quality",
+      "note": "是否生效取决于模型审核策略"
+    },
+    {
+      "zh": "动画上色",
+      "en": "anime coloring",
+      "cat": "style",
+      "note": "平涂 + 明快阴影，日式赛璐璐的常见写法"
+    },
+    {
+      "zh": "平涂上色",
+      "en": "flat color",
+      "cat": "style",
+      "note": "色块干净，适合做设计稿"
+    },
+    {
+      "zh": "单色",
+      "en": "monochrome",
+      "cat": "style",
+      "note": "整张只有一种色相，常和线稿配"
+    },
+    {
+      "zh": "灰度",
+      "en": "greyscale",
+      "cat": "style"
+    },
+    {
+      "zh": "局部上色",
+      "en": "spot color",
+      "cat": "style",
+      "note": "灰度底 + 一点颜色，冲击力强"
+    },
+    {
+      "zh": "限制色板",
+      "en": "limited palette",
+      "cat": "style",
+      "note": "只用 2~3 个颜色"
+    },
+    {
+      "zh": "官方立绘",
+      "en": "official art",
+      "cat": "style"
+    },
+    {
+      "zh": "游戏 CG",
+      "en": "game cg",
+      "cat": "style"
+    },
+    {
+      "zh": "宣传图",
+      "en": "promotional art",
+      "cat": "style"
+    },
+    {
+      "zh": "主视觉图",
+      "en": "key visual",
+      "cat": "style"
+    },
+    {
+      "zh": "插画",
+      "en": "illustration",
+      "cat": "style"
+    },
+    {
+      "zh": "数字绘画",
+      "en": "digital painting",
+      "cat": "style"
+    },
+    {
+      "zh": "传统媒介",
+      "en": "traditional media",
+      "cat": "style"
+    },
+    {
+      "zh": "水墨",
+      "en": "ink painting",
+      "cat": "style"
+    },
+    {
+      "zh": "水粉",
+      "en": "gouache",
+      "cat": "style"
+    },
+    {
+      "zh": "柔和粉彩",
+      "en": "pastel colors",
+      "cat": "style"
+    },
+    {
+      "zh": "鲜艳色彩",
+      "en": "vivid colors",
+      "cat": "style"
+    },
+    {
+      "zh": "低饱和色彩",
+      "en": "muted colors",
+      "cat": "style"
+    },
+    {
+      "zh": "低对比度",
+      "en": "low contrast",
+      "cat": "style"
+    },
+    {
+      "zh": "高饱和",
+      "en": "saturated",
+      "cat": "style"
+    },
+    {
+      "zh": "低饱和",
+      "en": "desaturated",
+      "cat": "style"
+    },
+    {
+      "zh": "复古画风",
+      "en": "retro artstyle",
+      "cat": "style"
+    },
+    {
+      "zh": "80年代风格",
+      "en": "1980s style",
+      "cat": "style"
+    },
+    {
+      "zh": "90年代风格",
+      "en": "1990s style",
+      "cat": "style"
+    },
+    {
+      "zh": "2000年代风格",
+      "en": "2000s style",
+      "cat": "style"
+    },
+    {
+      "zh": "矢量图",
+      "en": "vector art",
+      "cat": "style"
+    },
+    {
+      "zh": "扁平设计",
+      "en": "flat design",
+      "cat": "style"
+    },
+    {
+      "zh": "半写实",
+      "en": "semi-realistic",
+      "cat": "style"
+    },
+    {
+      "zh": "风格化",
+      "en": "stylized",
+      "cat": "style"
+    },
+    {
+      "zh": "卡通",
+      "en": "cartoon",
+      "cat": "style"
+    },
+    {
+      "zh": "漫画风",
+      "en": "comic style",
+      "cat": "style"
+    },
+    {
+      "zh": "日漫风",
+      "en": "manga style",
+      "cat": "style"
+    },
+    {
+      "zh": "同人志",
+      "en": "doujinshi",
+      "cat": "style"
+    },
+    {
+      "zh": "轻小说插画",
+      "en": "light novel style",
+      "cat": "style"
+    },
+    {
+      "zh": "视觉小说风格",
+      "en": "visual novel style",
+      "cat": "style"
+    },
+    {
+      "zh": "韩漫",
+      "en": "webtoon",
+      "cat": "style"
+    },
+    {
+      "zh": "装饰艺术",
+      "en": "art deco",
+      "cat": "style"
+    },
+    {
+      "zh": "表现主义",
+      "en": "expressionism",
+      "cat": "style"
+    },
+    {
+      "zh": "波普艺术",
+      "en": "pop art",
+      "cat": "style"
+    },
+    {
+      "zh": "涂鸦",
+      "en": "graffiti",
+      "cat": "style"
+    },
+    {
+      "zh": "CG 美术",
+      "en": "cg art",
+      "cat": "style"
+    },
+    {
+      "zh": "绘画质感",
+      "en": "painterly",
+      "cat": "style"
+    },
+    {
+      "zh": "干净线稿",
+      "en": "clean lineart",
+      "cat": "style"
+    },
+    {
+      "zh": "粗描边",
+      "en": "thick outlines",
+      "cat": "style"
+    },
+    {
+      "zh": "无描边",
+      "en": "no outline",
+      "cat": "style"
+    },
+    {
+      "zh": "网点效果",
+      "en": "screentone",
+      "cat": "style",
+      "note": "漫画网点，灰度层次靠点"
+    },
+    {
+      "zh": "色差",
+      "en": "chromatic aberration",
+      "cat": "style"
+    },
+    {
+      "zh": "胶片颗粒",
+      "en": "film grain",
+      "cat": "style"
+    },
+    {
+      "zh": "抖动像素",
+      "en": "dithering",
+      "cat": "style"
+    },
+    {
+      "zh": "故障艺术",
+      "en": "glitch art",
+      "cat": "style"
+    },
+    {
+      "zh": "合成器浪潮",
+      "en": "synthwave",
+      "cat": "style"
+    },
+    {
+      "zh": "暗色调",
+      "en": "dark mode",
+      "cat": "style"
+    },
+    {
+      "zh": "粉彩哥特",
+      "en": "pastel goth",
+      "cat": "style"
+    },
+    {
+      "zh": "可爱风",
+      "en": "kawaii",
+      "cat": "style"
+    },
+    {
+      "zh": "Q 版",
+      "en": "chibi",
+      "cat": "style",
+      "note": "头身比压到 2~3 头"
+    },
+    {
+      "zh": "超变形",
+      "en": "super deformed",
+      "cat": "style"
+    },
+    {
+      "zh": "4K 画质",
+      "en": "4k",
+      "cat": "quality"
+    },
+    {
+      "zh": "8K 画质",
+      "en": "8k",
+      "cat": "quality"
+    },
+    {
+      "zh": "WLOP",
+      "en": "wlop",
+      "cat": "artist",
+      "note": "厚涂光影流派，人物面部高光强"
+    },
+    {
+      "zh": "格雷格·鲁特科夫斯基",
+      "en": "greg rutkowski",
+      "cat": "artist",
+      "note": "奇幻厚涂，AI 圈最常见画师词"
+    },
+    {
+      "zh": "Artgerm",
+      "en": "artgerm",
+      "cat": "artist",
+      "note": "美漫式精致面孔"
+    },
+    {
+      "zh": "新海诚",
+      "en": "makoto shinkai",
+      "cat": "artist",
+      "note": "天空、光晕、逆光"
+    },
+    {
+      "zh": "吉卜力工作室",
+      "en": "studio ghibli",
+      "cat": "artist"
+    },
+    {
+      "zh": "京都动画",
+      "en": "kyoto animation",
+      "cat": "artist"
+    },
+    {
+      "zh": "监督",
+      "en": "kantoku",
+      "cat": "artist",
+      "note": "清爽日系少女"
+    },
+    {
+      "zh": "huke",
+      "en": "huke",
+      "cat": "artist",
+      "note": "黑深残机械感"
+    },
+    {
+      "zh": "redjuice",
+      "en": "redjuice",
+      "cat": "artist"
+    },
+    {
+      "zh": "ask",
+      "en": "ask",
+      "cat": "artist",
+      "note": "厚涂女性向"
+    },
+    {
+      "zh": "和田Akco",
+      "en": "wada arco",
+      "cat": "artist",
+      "note": "FGO 主力画师"
+    },
+    {
+      "zh": "pako",
+      "en": "pako",
+      "cat": "artist"
+    },
+    {
+      "zh": "lack",
+      "en": "lack",
+      "cat": "artist"
+    },
+    {
+      "zh": "noodle",
+      "en": "noodle",
+      "cat": "artist"
+    },
+    {
+      "zh": "ciloranko",
+      "en": "ciloranko",
+      "cat": "artist"
+    },
+    {
+      "zh": "modare",
+      "en": "modare",
+      "cat": "artist"
+    },
+    {
+      "zh": "三轮士郎",
+      "en": "shiro miwa",
+      "cat": "artist",
+      "note": "硬朗线条"
+    },
+    {
+      "zh": "天野喜孝",
+      "en": "yoshitaka amano",
+      "cat": "artist"
+    },
+    {
+      "zh": "阿尔丰斯·慕夏",
+      "en": "alphonse mucha",
+      "cat": "artist",
+      "note": "新艺术运动，装饰线条"
+    },
+    {
+      "zh": "吉田明彦",
+      "en": "akihiko yoshida",
+      "cat": "artist"
+    },
+    {
+      "zh": "大友克洋",
+      "en": "katsuhiro otomo",
+      "cat": "artist"
+    },
+    {
+      "zh": "宫崎骏",
+      "en": "hayao miyazaki",
+      "cat": "artist"
+    },
+    {
+      "zh": "今敏",
+      "en": "satoshi kon",
+      "cat": "artist"
+    },
+    {
+      "zh": "细田守",
+      "en": "mamoru hosoda",
+      "cat": "artist"
+    },
+    {
+      "zh": "新川洋司",
+      "en": "yoshitaka shinkawa",
+      "cat": "artist",
+      "note": "金属与笔触"
+    },
+    {
+      "zh": "伊利亚·库夫希诺夫",
+      "en": "ilya kuvshinov",
+      "cat": "artist"
+    },
+    {
+      "zh": "顾卫兹",
+      "en": "guweiz",
+      "cat": "artist",
+      "note": "冷光城市感"
+    },
+    {
+      "zh": "RossDraws",
+      "en": "rossdraws",
+      "cat": "artist"
+    },
+    {
+      "zh": "Sakimichan",
+      "en": "sakimichan",
+      "cat": "artist"
+    },
+    {
+      "zh": "Krenz 库沙",
+      "en": "krenz cushart",
+      "cat": "artist"
+    },
+    {
+      "zh": "Yuumei",
+      "en": "yuumei",
+      "cat": "artist"
+    },
+    {
+      "zh": "Loish",
+      "en": "loish",
+      "cat": "artist"
+    },
+    {
+      "zh": "詹姆斯·简",
+      "en": "james jean",
+      "cat": "artist"
+    },
+    {
+      "zh": "金政基",
+      "en": "kim jung gi",
+      "cat": "artist",
+      "note": "透视与线稿"
+    },
+    {
+      "zh": "弗兰克·弗拉泽塔",
+      "en": "frank frazetta",
+      "cat": "artist"
+    },
+    {
+      "zh": "鲍里斯·瓦列霍",
+      "en": "boris vallejo",
+      "cat": "artist"
+    },
+    {
+      "zh": "墨比斯",
+      "en": "moebius",
+      "cat": "artist"
+    },
+    {
+      "zh": "何塞·冈萨雷斯",
+      "en": "josan gonzalez",
+      "cat": "artist"
+    },
+    {
+      "zh": "久保带人",
+      "en": "tite kubo",
+      "cat": "artist"
+    },
+    {
+      "zh": "岸本齐史",
+      "en": "masashi kishimoto",
+      "cat": "artist"
+    },
+    {
+      "zh": "尾田荣一郎",
+      "en": "eiichiro oda",
+      "cat": "artist"
+    },
+    {
+      "zh": "鸟山明",
+      "en": "akira toriyama",
+      "cat": "artist"
+    },
+    {
+      "zh": "高桥留美子",
+      "en": "rumiko takahashi",
+      "cat": "artist"
+    },
+    {
+      "zh": "CLAMP",
+      "en": "clamp",
+      "cat": "artist"
+    },
+    {
+      "zh": "小畑健",
+      "en": "takeshi obata",
+      "cat": "artist"
+    },
+    {
+      "zh": "村田雄介",
+      "en": "yusuke murata",
+      "cat": "artist"
+    },
+    {
+      "zh": "三浦建太郎",
+      "en": "kentaro miura",
+      "cat": "artist"
+    },
+    {
+      "zh": "浅野一二〇",
+      "en": "inio asano",
+      "cat": "artist"
+    },
+    {
+      "zh": "山下达郎",
+      "en": "tatsuro yamashita",
+      "cat": "artist"
+    },
+    {
+      "zh": "野村哲也",
+      "en": "tetsuya nomura",
+      "cat": "artist"
+    },
+    {
+      "zh": "吉成曜",
+      "en": "yoh yoshinari",
+      "cat": "artist"
+    },
+    {
+      "zh": "永井博",
+      "en": "hiroshi nagai",
+      "cat": "artist",
+      "note": "南国城市，色块干净"
+    },
+    {
+      "zh": "林田球",
+      "en": "q hayashida",
+      "cat": "artist"
+    },
+    {
+      "zh": "藤岛康介",
+      "en": "kousuke fujishima",
+      "cat": "artist"
+    },
+    {
+      "zh": "大暮维人",
+      "en": "oh! great",
+      "cat": "artist"
+    },
+    {
+      "zh": "弐瓶勉",
+      "en": "nihei tsutomu",
+      "cat": "artist"
+    },
+    {
+      "zh": "葛饰北斋",
+      "en": "hokusai",
+      "cat": "artist"
+    },
+    {
+      "zh": "皮奥特·雅布隆斯基",
+      "en": "piotr jabłoński",
+      "cat": "artist"
+    },
+    {
+      "zh": "Krenz",
+      "en": "krenz",
+      "cat": "artist"
+    },
+    {
+      "zh": "一个女孩",
+      "en": "1girl",
+      "cat": "character",
+      "note": "单人标签的基础写法，和 solo 一起用"
+    },
+    {
+      "zh": "一个男孩",
+      "en": "1boy",
+      "cat": "character"
+    },
+    {
+      "zh": "两个女孩",
+      "en": "2girls",
+      "cat": "character"
+    },
+    {
+      "zh": "两个男孩",
+      "en": "2boys",
+      "cat": "character"
+    },
+    {
+      "zh": "多个女孩",
+      "en": "multiple girls",
+      "cat": "character"
+    },
+    {
+      "zh": "多个男孩",
+      "en": "multiple boys",
+      "cat": "character"
+    },
+    {
+      "zh": "单人",
+      "en": "solo",
+      "cat": "character",
+      "note": "只画一个人，和 1girl 有微妙差别"
+    },
+    {
+      "zh": "只聚焦一人",
+      "en": "solo focus",
+      "cat": "character"
+    },
+    {
+      "zh": "成年人",
+      "en": "adult",
+      "cat": "character"
+    },
+    {
+      "zh": "成熟女性",
+      "en": "mature female",
+      "cat": "character"
+    },
+    {
+      "zh": "青少年",
+      "en": "teenager",
+      "cat": "character"
+    },
+    {
+      "zh": "幼女体型",
+      "en": "loli",
+      "cat": "character"
+    },
+    {
+      "zh": "幼男体型",
+      "en": "shota",
+      "cat": "character"
+    },
+    {
+      "zh": "男性为主",
+      "en": "male focus",
+      "cat": "character"
+    },
+    {
+      "zh": "女性为主",
+      "en": "female focus",
+      "cat": "character"
+    },
+    {
+      "zh": "中性",
+      "en": "androgynous",
+      "cat": "character"
+    },
+    {
+      "zh": "肌肉发达",
+      "en": "muscular",
+      "cat": "character"
+    },
+    {
+      "zh": "纤细体型",
+      "en": "slender",
+      "cat": "character"
+    },
+    {
+      "zh": "曲线丰满",
+      "en": "curvy",
+      "cat": "character"
+    },
+    {
+      "zh": "娇小",
+      "en": "petite",
+      "cat": "character"
+    },
+    {
+      "zh": "高个女性",
+      "en": "tall female",
+      "cat": "character"
+    },
+    {
+      "zh": "精灵",
+      "en": "elf",
+      "cat": "character"
+    },
+    {
+      "zh": "兽人",
+      "en": "orc",
+      "cat": "character"
+    },
+    {
+      "zh": "半机械人",
+      "en": "cyborg",
+      "cat": "character"
+    },
+    {
+      "zh": "机器人",
+      "en": "robot",
+      "cat": "character"
+    },
+    {
+      "zh": "恶魔女孩",
+      "en": "demon girl",
+      "cat": "character"
+    },
+    {
+      "zh": "天使女孩",
+      "en": "angel girl",
+      "cat": "character"
+    },
+    {
+      "zh": "吸血鬼",
+      "en": "vampire",
+      "cat": "character"
+    },
+    {
+      "zh": "人鱼",
+      "en": "mermaid",
+      "cat": "character"
+    },
+    {
+      "zh": "狐妖",
+      "en": "kitsune",
+      "cat": "character"
+    },
+    {
+      "zh": "龙女",
+      "en": "dragon girl",
+      "cat": "character"
+    },
+    {
+      "zh": "机械师",
+      "en": "mechanic",
+      "cat": "character"
+    },
+    {
+      "zh": "女骑士",
+      "en": "knight girl",
+      "cat": "character"
+    },
+    {
+      "zh": "女巫",
+      "en": "witch",
+      "cat": "character"
+    },
+    {
+      "zh": "修女",
+      "en": "nun",
+      "cat": "character"
+    },
+    {
+      "zh": "巫女",
+      "en": "miko",
+      "cat": "character"
+    },
+    {
+      "zh": "偶像",
+      "en": "idol",
+      "cat": "character"
+    },
+    {
+      "zh": "职场女性",
+      "en": "office lady",
+      "cat": "character"
+    },
+    {
+      "zh": "学生",
+      "en": "student",
+      "cat": "character"
+    },
+    {
+      "zh": "超长发",
+      "en": "very long hair",
+      "cat": "hair"
+    },
+    {
+      "zh": "中长发",
+      "en": "medium hair",
+      "cat": "hair"
+    },
+    {
+      "zh": "极长发",
+      "en": "absurdly long hair",
+      "cat": "hair"
+    },
+    {
+      "zh": "凌乱头发",
+      "en": "messy hair",
+      "cat": "hair"
+    },
+    {
+      "zh": "波浪发",
+      "en": "wavy hair",
+      "cat": "hair"
+    },
+    {
+      "zh": "直发",
+      "en": "straight hair",
+      "cat": "hair"
+    },
+    {
+      "zh": "卷发",
+      "en": "curly hair",
+      "cat": "hair"
+    },
+    {
+      "zh": "辫子",
+      "en": "braid",
+      "cat": "hair"
+    },
+    {
+      "zh": "双辫",
+      "en": "twin braids",
+      "cat": "hair"
+    },
+    {
+      "zh": "法式编发",
+      "en": "french braid",
+      "cat": "hair"
+    },
+    {
+      "zh": "侧马尾",
+      "en": "side ponytail",
+      "cat": "hair"
+    },
+    {
+      "zh": "高马尾",
+      "en": "high ponytail",
+      "cat": "hair"
+    },
+    {
+      "zh": "低双马尾",
+      "en": "low twin tails",
+      "cat": "hair"
+    },
+    {
+      "zh": "钻头卷",
+      "en": "drill hair",
+      "cat": "hair",
+      "note": "大小姐卷"
+    },
+    {
+      "zh": "波波头",
+      "en": "bob cut",
+      "cat": "hair"
+    },
+    {
+      "zh": "公主切",
+      "en": "hime cut",
+      "cat": "hair",
+      "note": "齐刘海 + 两侧长鬓发"
+    },
+    {
+      "zh": "精灵短发",
+      "en": "pixie cut",
+      "cat": "hair"
+    },
+    {
+      "zh": "铲青",
+      "en": "undercut",
+      "cat": "hair"
+    },
+    {
+      "zh": "刘海",
+      "en": "bangs",
+      "cat": "hair"
+    },
+    {
+      "zh": "齐刘海",
+      "en": "blunt bangs",
+      "cat": "hair"
+    },
+    {
+      "zh": "斜刘海",
+      "en": "swept bangs",
+      "cat": "hair"
+    },
+    {
+      "zh": "眼间发",
+      "en": "hair between eyes",
+      "cat": "hair"
+    },
+    {
+      "zh": "呆毛",
+      "en": "ahoge",
+      "cat": "hair",
+      "note": "头顶那根翘起来的"
+    },
+    {
+      "zh": "发饰",
+      "en": "hair ornament",
+      "cat": "hair"
+    },
+    {
+      "zh": "发带",
+      "en": "hair ribbon",
+      "cat": "hair"
+    },
+    {
+      "zh": "发箍",
+      "en": "hairband",
+      "cat": "hair"
+    },
+    {
+      "zh": "金发",
+      "en": "blonde hair",
+      "cat": "hair"
+    },
+    {
+      "zh": "棕发",
+      "en": "brown hair",
+      "cat": "hair"
+    },
+    {
+      "zh": "黑发",
+      "en": "black hair",
+      "cat": "hair"
+    },
+    {
+      "zh": "蓝发",
+      "en": "blue hair",
+      "cat": "hair"
+    },
+    {
+      "zh": "粉发",
+      "en": "pink hair",
+      "cat": "hair"
+    },
+    {
+      "zh": "紫发",
+      "en": "purple hair",
+      "cat": "hair"
+    },
+    {
+      "zh": "绿发",
+      "en": "green hair",
+      "cat": "hair"
+    },
+    {
+      "zh": "红发",
+      "en": "red hair",
+      "cat": "hair"
+    },
+    {
+      "zh": "橙发",
+      "en": "orange hair",
+      "cat": "hair"
+    },
+    {
+      "zh": "灰发",
+      "en": "grey hair",
+      "cat": "hair"
+    },
+    {
+      "zh": "多色头发",
+      "en": "multicolored hair",
+      "cat": "hair"
+    },
+    {
+      "zh": "渐变发",
+      "en": "gradient hair",
+      "cat": "hair"
+    },
+    {
+      "zh": "挑染",
+      "en": "streaked hair",
+      "cat": "hair"
+    },
+    {
+      "zh": "蓝眼",
+      "en": "blue eyes",
+      "cat": "face"
+    },
+    {
+      "zh": "绿眼",
+      "en": "green eyes",
+      "cat": "face"
+    },
+    {
+      "zh": "棕眼",
+      "en": "brown eyes",
+      "cat": "face"
+    },
+    {
+      "zh": "黑眼",
+      "en": "black eyes",
+      "cat": "face"
+    },
+    {
+      "zh": "紫眼",
+      "en": "purple eyes",
+      "cat": "face"
+    },
+    {
+      "zh": "金瞳",
+      "en": "golden eyes",
+      "cat": "face"
+    },
+    {
+      "zh": "睫毛",
+      "en": "eyelashes",
+      "cat": "face"
+    },
+    {
+      "zh": "长睫毛",
+      "en": "long eyelashes",
+      "cat": "face"
+    },
+    {
+      "zh": "眼影",
+      "en": "eyeshadow",
+      "cat": "face"
+    },
+    {
+      "zh": "眼线",
+      "en": "eyeliner",
+      "cat": "face"
+    },
+    {
+      "zh": "脸红",
+      "en": "blush",
+      "cat": "face"
+    },
+    {
+      "zh": "发光的眼睛",
+      "en": "glowing eyes",
+      "cat": "face"
+    },
+    {
+      "zh": "小尖牙",
+      "en": "fang",
+      "cat": "face"
+    },
+    {
+      "zh": "尖牙",
+      "en": "sharp teeth",
+      "cat": "face"
+    },
+    {
+      "zh": "眼下痣",
+      "en": "mole under eye",
+      "cat": "face"
+    },
+    {
+      "zh": "脸颊痣",
+      "en": "mole on cheek",
+      "cat": "face"
+    },
+    {
+      "zh": "美人痣",
+      "en": "beauty mark",
+      "cat": "face"
+    },
+    {
+      "zh": "妆容",
+      "en": "makeup",
+      "cat": "face"
+    },
+    {
+      "zh": "口红",
+      "en": "lipstick",
+      "cat": "face"
+    },
+    {
+      "zh": "眼罩",
+      "en": "eyepatch",
+      "cat": "face"
+    },
+    {
+      "zh": "眼镜",
+      "en": "glasses",
+      "cat": "face"
+    },
+    {
+      "zh": "圆框眼镜",
+      "en": "round eyewear",
+      "cat": "face"
+    },
+    {
+      "zh": "墨镜",
+      "en": "sunglasses",
+      "cat": "face"
+    },
+    {
+      "zh": "微笑",
+      "en": "smile",
+      "cat": "expression"
+    },
+    {
+      "zh": "咧嘴笑",
+      "en": "grin",
+      "cat": "expression"
+    },
+    {
+      "zh": "张嘴",
+      "en": "open mouth",
+      "cat": "expression"
+    },
+    {
+      "zh": "闭嘴",
+      "en": "closed mouth",
+      "cat": "expression"
+    },
+    {
+      "zh": "微张的唇",
+      "en": "parted lips",
+      "cat": "expression"
+    },
+    {
+      "zh": "大笑",
+      "en": "laughing",
+      "cat": "expression"
+    },
+    {
+      "zh": "哭",
+      "en": "crying",
+      "cat": "expression"
+    },
+    {
+      "zh": "眼泪",
+      "en": "tears",
+      "cat": "expression"
+    },
+    {
+      "zh": "难过",
+      "en": "sad",
+      "cat": "expression"
+    },
+    {
+      "zh": "生气",
+      "en": "angry",
+      "cat": "expression"
+    },
+    {
+      "zh": "撅嘴",
+      "en": "pout",
+      "cat": "expression"
+    },
+    {
+      "zh": "惊讶",
+      "en": "surprised",
+      "cat": "expression"
+    },
+    {
+      "zh": "震惊",
+      "en": "shocked",
+      "cat": "expression"
+    },
+    {
+      "zh": "羞怯",
+      "en": "embarrassed",
+      "cat": "expression"
+    },
+    {
+      "zh": "面无表情",
+      "en": "expressionless",
+      "cat": "expression"
+    },
+    {
+      "zh": "严肃",
+      "en": "serious",
+      "cat": "expression"
+    },
+    {
+      "zh": "得意",
+      "en": "smug",
+      "cat": "expression"
+    },
+    {
+      "zh": "坏笑",
+      "en": "smirk",
+      "cat": "expression"
+    },
+    {
+      "zh": "困倦",
+      "en": "sleepy",
+      "cat": "expression"
+    },
+    {
+      "zh": "闭眼",
+      "en": "closed eyes",
+      "cat": "expression"
+    },
+    {
+      "zh": "半睁眼",
+      "en": "half-closed eyes",
+      "cat": "expression"
+    },
+    {
+      "zh": "眨眼",
+      "en": "wink",
+      "cat": "expression"
+    },
+    {
+      "zh": "吐舌",
+      "en": "tongue out",
+      "cat": "expression"
+    },
+    {
+      "zh": "咬唇",
+      "en": "biting lip",
+      "cat": "expression"
+    },
+    {
+      "zh": "浅笑",
+      "en": "light smile",
+      "cat": "expression"
+    },
+    {
+      "zh": "诱惑的笑",
+      "en": "seductive smile",
+      "cat": "expression"
+    },
+    {
+      "zh": "疯狂的笑",
+      "en": "crazy smile",
+      "cat": "expression"
+    },
+    {
+      "zh": "尖叫",
+      "en": "screaming",
+      "cat": "expression"
+    },
+    {
+      "zh": "沉思",
+      "en": "thinking",
+      "cat": "expression"
+    },
+    {
+      "zh": "站立",
+      "en": "standing",
+      "cat": "pose"
+    },
+    {
+      "zh": "坐着",
+      "en": "sitting",
+      "cat": "pose"
+    },
+    {
+      "zh": "跪着",
+      "en": "kneeling",
+      "cat": "pose"
+    },
+    {
+      "zh": "蹲着",
+      "en": "squatting",
+      "cat": "pose"
+    },
+    {
+      "zh": "躺着",
+      "en": "lying",
+      "cat": "pose"
+    },
+    {
+      "zh": "仰躺",
+      "en": "on back",
+      "cat": "pose"
+    },
+    {
+      "zh": "趴着",
+      "en": "on stomach",
+      "cat": "pose"
+    },
+    {
+      "zh": "前倾",
+      "en": "leaning forward",
+      "cat": "pose"
+    },
+    {
+      "zh": "后仰",
+      "en": "leaning back",
+      "cat": "pose"
+    },
+    {
+      "zh": "走路",
+      "en": "walking",
+      "cat": "pose"
+    },
+    {
+      "zh": "奔跑",
+      "en": "running",
+      "cat": "pose"
+    },
+    {
+      "zh": "跳跃",
+      "en": "jumping",
+      "cat": "pose"
+    },
+    {
+      "zh": "飞行",
+      "en": "flying",
+      "cat": "pose"
+    },
+    {
+      "zh": "下坠",
+      "en": "falling",
+      "cat": "pose"
+    },
+    {
+      "zh": "跳舞",
+      "en": "dancing",
+      "cat": "pose"
+    },
+    {
+      "zh": "战斗姿态",
+      "en": "fighting stance",
+      "cat": "pose"
+    },
+    {
+      "zh": "持剑",
+      "en": "holding sword",
+      "cat": "pose"
+    },
+    {
+      "zh": "手持武器",
+      "en": "holding weapon",
+      "cat": "pose"
+    },
+    {
+      "zh": "拿杯子",
+      "en": "holding cup",
+      "cat": "pose"
+    },
+    {
+      "zh": "拿书",
+      "en": "holding book",
+      "cat": "pose"
+    },
+    {
+      "zh": "撑伞",
+      "en": "holding umbrella",
+      "cat": "pose"
+    },
+    {
+      "zh": "双手背后",
+      "en": "arms behind back",
+      "cat": "pose"
+    },
+    {
+      "zh": "举起双手",
+      "en": "arms up",
+      "cat": "pose"
+    },
+    {
+      "zh": "抱臂",
+      "en": "arms crossed",
+      "cat": "pose"
+    },
+    {
+      "zh": "手叉腰",
+      "en": "hand on hip",
+      "cat": "pose"
+    },
+    {
+      "zh": "双手捧脸",
+      "en": "hands on own cheeks",
+      "cat": "pose"
+    },
+    {
+      "zh": "抬手",
+      "en": "hand up",
+      "cat": "pose"
+    },
+    {
+      "zh": "比耶",
+      "en": "peace sign",
+      "cat": "pose"
+    },
+    {
+      "zh": "挥手",
+      "en": "waving",
+      "cat": "pose"
+    },
+    {
+      "zh": "敬礼",
+      "en": "salute",
+      "cat": "pose"
+    },
+    {
+      "zh": "伸手",
+      "en": "reaching out",
+      "cat": "pose"
+    },
+    {
+      "zh": "拥抱",
+      "en": "hugging",
+      "cat": "pose"
+    },
+    {
+      "zh": "抱着",
+      "en": "carrying",
+      "cat": "pose"
+    },
+    {
+      "zh": "看镜头",
+      "en": "looking at viewer",
+      "cat": "pose"
+    },
+    {
+      "zh": "看向别处",
+      "en": "looking away",
+      "cat": "pose"
+    },
+    {
+      "zh": "回头看",
+      "en": "looking back",
+      "cat": "pose"
+    },
+    {
+      "zh": "向上看",
+      "en": "looking up",
+      "cat": "pose"
+    },
+    {
+      "zh": "向下看",
+      "en": "looking down",
+      "cat": "pose"
+    },
+    {
+      "zh": "歪头",
+      "en": "head tilt",
+      "cat": "pose"
+    },
+    {
+      "zh": "背影",
+      "en": "from behind",
+      "cat": "pose"
+    },
+    {
+      "zh": "侧面",
+      "en": "from side",
+      "cat": "pose"
+    },
+    {
+      "zh": "俯视视角",
+      "en": "from above",
+      "cat": "pose"
+    },
+    {
+      "zh": "仰视视角",
+      "en": "from below",
+      "cat": "pose"
+    },
+    {
+      "zh": "七分身",
+      "en": "cowboy shot",
+      "cat": "pose",
+      "note": "从膝盖以上取景"
+    },
+    {
+      "zh": "上半身",
+      "en": "upper body",
+      "cat": "pose"
+    },
+    {
+      "zh": "脚出画",
+      "en": "feet out of frame",
+      "cat": "pose"
+    },
+    {
+      "zh": "动感姿势",
+      "en": "dynamic pose",
+      "cat": "pose"
+    },
+    {
+      "zh": "对立式站姿",
+      "en": "contrapposto",
+      "cat": "pose",
+      "note": "重心落在一侧腿，形体有曲线"
+    },
+    {
+      "zh": "连衣裙",
+      "en": "dress",
+      "cat": "outfit"
+    },
+    {
+      "zh": "白裙",
+      "en": "white dress",
+      "cat": "outfit"
+    },
+    {
+      "zh": "晚礼服",
+      "en": "evening gown",
+      "cat": "outfit"
+    },
+    {
+      "zh": "婚纱",
+      "en": "wedding dress",
+      "cat": "outfit"
+    },
+    {
+      "zh": "吊带裙",
+      "en": "sundress",
+      "cat": "outfit"
+    },
+    {
+      "zh": "短裙",
+      "en": "skirt",
+      "cat": "outfit"
+    },
+    {
+      "zh": "百褶裙",
+      "en": "pleated skirt",
+      "cat": "outfit"
+    },
+    {
+      "zh": "超短裙",
+      "en": "miniskirt",
+      "cat": "outfit"
+    },
+    {
+      "zh": "短裤",
+      "en": "shorts",
+      "cat": "outfit"
+    },
+    {
+      "zh": "牛仔裤",
+      "en": "jeans",
+      "cat": "outfit"
+    },
+    {
+      "zh": "长裤",
+      "en": "pants",
+      "cat": "outfit"
+    },
+    {
+      "zh": "丝袜",
+      "en": "stockings",
+      "cat": "outfit"
+    },
+    {
+      "zh": "大腿袜",
+      "en": "thighhighs",
+      "cat": "outfit",
+      "note": "和绝对领域强绑定"
+    },
+    {
+      "zh": "连裤袜",
+      "en": "pantyhose",
+      "cat": "outfit"
+    },
+    {
+      "zh": "袜子",
+      "en": "socks",
+      "cat": "outfit"
+    },
+    {
+      "zh": "及膝袜",
+      "en": "kneehighs",
+      "cat": "outfit"
+    },
+    {
+      "zh": "靴子",
+      "en": "boots",
+      "cat": "outfit"
+    },
+    {
+      "zh": "运动鞋",
+      "en": "sneakers",
+      "cat": "outfit"
+    },
+    {
+      "zh": "凉鞋",
+      "en": "sandals",
+      "cat": "outfit"
+    },
+    {
+      "zh": "手套",
+      "en": "gloves",
+      "cat": "outfit"
+    },
+    {
+      "zh": "露指手套",
+      "en": "fingerless gloves",
+      "cat": "outfit"
+    },
+    {
+      "zh": "围巾",
+      "en": "scarf",
+      "cat": "outfit"
+    },
+    {
+      "zh": "领带",
+      "en": "necktie",
+      "cat": "outfit"
+    },
+    {
+      "zh": "领结",
+      "en": "bowtie",
+      "cat": "outfit"
+    },
+    {
+      "zh": "颈圈",
+      "en": "choker",
+      "cat": "outfit"
+    },
+    {
+      "zh": "项链",
+      "en": "necklace",
+      "cat": "outfit"
+    },
+    {
+      "zh": "耳环",
+      "en": "earrings",
+      "cat": "outfit"
+    },
+    {
+      "zh": "手链",
+      "en": "bracelet",
+      "cat": "outfit"
+    },
+    {
+      "zh": "帽子",
+      "en": "hat",
+      "cat": "outfit"
+    },
+    {
+      "zh": "贝雷帽",
+      "en": "beret",
+      "cat": "outfit"
+    },
+    {
+      "zh": "兜帽",
+      "en": "hood",
+      "cat": "outfit"
+    },
+    {
+      "zh": "斗篷",
+      "en": "cape",
+      "cat": "outfit"
+    },
+    {
+      "zh": "外套",
+      "en": "coat",
+      "cat": "outfit"
+    },
+    {
+      "zh": "风衣",
+      "en": "trench coat",
+      "cat": "outfit"
+    },
+    {
+      "zh": "西装",
+      "en": "suit",
+      "cat": "outfit"
+    },
+    {
+      "zh": "西装外套",
+      "en": "blazer",
+      "cat": "outfit"
+    },
+    {
+      "zh": "毛衣",
+      "en": "sweater",
+      "cat": "outfit"
+    },
+    {
+      "zh": "连帽衫",
+      "en": "hoodie",
+      "cat": "outfit"
+    },
+    {
+      "zh": "T 恤",
+      "en": "t-shirt",
+      "cat": "outfit"
+    },
+    {
+      "zh": "衬衫",
+      "en": "blouse",
+      "cat": "outfit"
+    },
+    {
+      "zh": "吊带背心",
+      "en": "camisole",
+      "cat": "outfit"
+    },
+    {
+      "zh": "束腰",
+      "en": "corset",
+      "cat": "outfit"
+    },
+    {
+      "zh": "紧身连体衣",
+      "en": "bodysuit",
+      "cat": "outfit"
+    },
+    {
+      "zh": "体操服",
+      "en": "leotard",
+      "cat": "outfit"
+    },
+    {
+      "zh": "泳装",
+      "en": "swimsuit",
+      "cat": "outfit"
+    },
+    {
+      "zh": "比基尼",
+      "en": "bikini",
+      "cat": "outfit"
+    },
+    {
+      "zh": "运动服",
+      "en": "sportswear",
+      "cat": "outfit"
+    },
+    {
+      "zh": "军装",
+      "en": "military uniform",
+      "cat": "outfit"
+    },
+    {
+      "zh": "护士服",
+      "en": "nurse uniform",
+      "cat": "outfit"
+    },
+    {
+      "zh": "板甲",
+      "en": "suit armor",
+      "cat": "outfit"
+    },
+    {
+      "zh": "胸甲",
+      "en": "breastplate",
+      "cat": "outfit"
+    },
+    {
+      "zh": "肩甲",
+      "en": "pauldrons",
+      "cat": "outfit"
+    },
+    {
+      "zh": "护手",
+      "en": "gauntlets",
+      "cat": "outfit"
+    },
+    {
+      "zh": "带帽斗篷",
+      "en": "hooded cloak",
+      "cat": "outfit"
+    },
+    {
+      "zh": "浴衣",
+      "en": "yukata",
+      "cat": "outfit"
+    },
+    {
+      "zh": "长衫",
+      "en": "cheongsam",
+      "cat": "outfit"
+    },
+    {
+      "zh": "纱丽",
+      "en": "sari",
+      "cat": "outfit"
+    },
+    {
+      "zh": "托加袍",
+      "en": "toga",
+      "cat": "outfit"
+    },
+    {
+      "zh": "围裙",
+      "en": "apron",
+      "cat": "outfit"
+    },
+    {
+      "zh": "丝带",
+      "en": "ribbon",
+      "cat": "outfit"
+    },
+    {
+      "zh": "蕾丝",
+      "en": "lace",
+      "cat": "outfit"
+    },
+    {
+      "zh": "褶边",
+      "en": "frills",
+      "cat": "outfit"
+    },
+    {
+      "zh": "分离式袖子",
+      "en": "detached sleeves",
+      "cat": "outfit"
+    },
+    {
+      "zh": "露肩",
+      "en": "off shoulder",
+      "cat": "outfit"
+    },
+    {
+      "zh": "露背",
+      "en": "backless",
+      "cat": "outfit"
+    },
+    {
+      "zh": "乳沟",
+      "en": "cleavage",
+      "cat": "outfit"
+    },
+    {
+      "zh": "露腰",
+      "en": "midriff",
+      "cat": "outfit"
+    },
+    {
+      "zh": "裸肩",
+      "en": "bare shoulders",
+      "cat": "outfit"
+    },
+    {
+      "zh": "剑",
+      "en": "sword",
+      "cat": "prop"
+    },
+    {
+      "zh": "武士刀",
+      "en": "katana",
+      "cat": "prop"
+    },
+    {
+      "zh": "匕首",
+      "en": "dagger",
+      "cat": "prop"
+    },
+    {
+      "zh": "长枪",
+      "en": "spear",
+      "cat": "prop"
+    },
+    {
+      "zh": "弓",
+      "en": "bow",
+      "cat": "prop"
+    },
+    {
+      "zh": "镰刀",
+      "en": "scythe",
+      "cat": "prop"
+    },
+    {
+      "zh": "法杖",
+      "en": "staff",
+      "cat": "prop"
+    },
+    {
+      "zh": "魔杖",
+      "en": "wand",
+      "cat": "prop"
+    },
+    {
+      "zh": "盾牌",
+      "en": "shield",
+      "cat": "prop"
+    },
+    {
+      "zh": "枪",
+      "en": "gun",
+      "cat": "prop"
+    },
+    {
+      "zh": "步枪",
+      "en": "rifle",
+      "cat": "prop"
+    },
+    {
+      "zh": "手枪",
+      "en": "pistol",
+      "cat": "prop"
+    },
+    {
+      "zh": "伞",
+      "en": "umbrella",
+      "cat": "prop"
+    },
+    {
+      "zh": "纸伞",
+      "en": "parasol",
+      "cat": "prop"
+    },
+    {
+      "zh": "书",
+      "en": "book",
+      "cat": "prop"
+    },
+    {
+      "zh": "卷轴",
+      "en": "scroll",
+      "cat": "prop"
+    },
+    {
+      "zh": "灯笼",
+      "en": "lantern",
+      "cat": "prop"
+    },
+    {
+      "zh": "蜡烛",
+      "en": "candle",
+      "cat": "prop"
+    },
+    {
+      "zh": "相机",
+      "en": "camera",
+      "cat": "prop"
+    },
+    {
+      "zh": "耳机",
+      "en": "headphones",
+      "cat": "prop"
+    },
+    {
+      "zh": "麦克风",
+      "en": "microphone",
+      "cat": "prop"
+    },
+    {
+      "zh": "吉他",
+      "en": "guitar",
+      "cat": "prop"
+    },
+    {
+      "zh": "小提琴",
+      "en": "violin",
+      "cat": "prop"
+    },
+    {
+      "zh": "钢琴",
+      "en": "piano",
+      "cat": "prop"
+    },
+    {
+      "zh": "茶杯",
+      "en": "teacup",
+      "cat": "prop"
+    },
+    {
+      "zh": "瓶子",
+      "en": "bottle",
+      "cat": "prop"
+    },
+    {
+      "zh": "背包",
+      "en": "backpack",
+      "cat": "prop"
+    },
+    {
+      "zh": "手袋",
+      "en": "handbag",
+      "cat": "prop"
+    },
+    {
+      "zh": "气球",
+      "en": "balloon",
+      "cat": "prop"
+    },
+    {
+      "zh": "花",
+      "en": "flower",
+      "cat": "prop"
+    },
+    {
+      "zh": "玫瑰",
+      "en": "rose",
+      "cat": "prop"
+    },
+    {
+      "zh": "花瓣",
+      "en": "petals",
+      "cat": "prop"
+    },
+    {
+      "zh": "彩带",
+      "en": "ribbon streamers",
+      "cat": "prop"
+    },
+    {
+      "zh": "纸屑",
+      "en": "confetti",
+      "cat": "prop"
+    },
+    {
+      "zh": "钟表",
+      "en": "clock",
+      "cat": "prop"
+    },
+    {
+      "zh": "镜子",
+      "en": "mirror",
+      "cat": "prop"
+    },
+    {
+      "zh": "面具",
+      "en": "mask",
+      "cat": "prop"
+    },
+    {
+      "zh": "人偶",
+      "en": "doll",
+      "cat": "prop"
+    },
+    {
+      "zh": "泰迪熊",
+      "en": "teddy bear",
+      "cat": "prop"
+    },
+    {
+      "zh": "卡片",
+      "en": "card",
+      "cat": "prop"
+    },
+    {
+      "zh": "纸飞机",
+      "en": "paper plane",
+      "cat": "prop"
+    },
+    {
+      "zh": "自行车",
+      "en": "bicycle",
+      "cat": "prop"
+    },
+    {
+      "zh": "摩托车",
+      "en": "motorcycle",
+      "cat": "prop"
+    },
+    {
+      "zh": "宇宙飞船",
+      "en": "spaceship",
+      "cat": "prop"
+    },
+    {
+      "zh": "卧室",
+      "en": "bedroom",
+      "cat": "scene"
+    },
+    {
+      "zh": "厨房",
+      "en": "kitchen",
+      "cat": "scene"
+    },
+    {
+      "zh": "教室",
+      "en": "classroom",
+      "cat": "scene"
+    },
+    {
+      "zh": "学校",
+      "en": "school",
+      "cat": "scene"
+    },
+    {
+      "zh": "办公室",
+      "en": "office",
+      "cat": "scene"
+    },
+    {
+      "zh": "酒吧",
+      "en": "bar",
+      "cat": "scene"
+    },
+    {
+      "zh": "餐厅",
+      "en": "restaurant",
+      "cat": "scene"
+    },
+    {
+      "zh": "城市街道",
+      "en": "city street",
+      "cat": "scene"
+    },
+    {
+      "zh": "小巷",
+      "en": "alley",
+      "cat": "scene"
+    },
+    {
+      "zh": "阳台",
+      "en": "balcony",
+      "cat": "scene"
+    },
+    {
+      "zh": "火车站",
+      "en": "train station",
+      "cat": "scene"
+    },
+    {
+      "zh": "地铁",
+      "en": "subway",
+      "cat": "scene"
+    },
+    {
+      "zh": "机场",
+      "en": "airport",
+      "cat": "scene"
+    },
+    {
+      "zh": "海滩",
+      "en": "beach",
+      "cat": "scene"
+    },
+    {
+      "zh": "海洋",
+      "en": "ocean",
+      "cat": "scene"
+    },
+    {
+      "zh": "湖",
+      "en": "lake",
+      "cat": "scene"
+    },
+    {
+      "zh": "河流",
+      "en": "river",
+      "cat": "scene"
+    },
+    {
+      "zh": "瀑布",
+      "en": "waterfall",
+      "cat": "scene"
+    },
+    {
+      "zh": "山",
+      "en": "mountain",
+      "cat": "scene"
+    },
+    {
+      "zh": "丘陵",
+      "en": "hills",
+      "cat": "scene"
+    },
+    {
+      "zh": "悬崖",
+      "en": "cliff",
+      "cat": "scene"
+    },
+    {
+      "zh": "洞穴",
+      "en": "cave",
+      "cat": "scene"
+    },
+    {
+      "zh": "丛林",
+      "en": "jungle",
+      "cat": "scene"
+    },
+    {
+      "zh": "竹林",
+      "en": "bamboo forest",
+      "cat": "scene"
+    },
+    {
+      "zh": "樱花",
+      "en": "cherry blossoms",
+      "cat": "scene"
+    },
+    {
+      "zh": "公园",
+      "en": "park",
+      "cat": "scene"
+    },
+    {
+      "zh": "花园",
+      "en": "garden",
+      "cat": "scene"
+    },
+    {
+      "zh": "温室",
+      "en": "greenhouse",
+      "cat": "scene"
+    },
+    {
+      "zh": "神社",
+      "en": "shrine",
+      "cat": "scene"
+    },
+    {
+      "zh": "寺庙",
+      "en": "temple",
+      "cat": "scene"
+    },
+    {
+      "zh": "教堂",
+      "en": "church",
+      "cat": "scene"
+    },
+    {
+      "zh": "城堡",
+      "en": "castle",
+      "cat": "scene"
+    },
+    {
+      "zh": "宫殿",
+      "en": "palace",
+      "cat": "scene"
+    },
+    {
+      "zh": "博物馆",
+      "en": "museum",
+      "cat": "scene"
+    },
+    {
+      "zh": "实验室",
+      "en": "laboratory",
+      "cat": "scene"
+    },
+    {
+      "zh": "机房",
+      "en": "server room",
+      "cat": "scene"
+    },
+    {
+      "zh": "工厂",
+      "en": "factory",
+      "cat": "scene"
+    },
+    {
+      "zh": "工地",
+      "en": "construction site",
+      "cat": "scene"
+    },
+    {
+      "zh": "停车场",
+      "en": "parking lot",
+      "cat": "scene"
+    },
+    {
+      "zh": "街市",
+      "en": "street market",
+      "cat": "scene"
+    },
+    {
+      "zh": "祭典",
+      "en": "festival",
+      "cat": "scene"
+    },
+    {
+      "zh": "体育场",
+      "en": "stadium",
+      "cat": "scene"
+    },
+    {
+      "zh": "战场",
+      "en": "battlefield",
+      "cat": "scene"
+    },
+    {
+      "zh": "空间站",
+      "en": "space station",
+      "cat": "scene"
+    },
+    {
+      "zh": "异星",
+      "en": "alien planet",
+      "cat": "scene"
+    },
+    {
+      "zh": "奇幻村庄",
+      "en": "fantasy village",
+      "cat": "scene"
+    },
+    {
+      "zh": "浮空岛",
+      "en": "floating island",
+      "cat": "scene"
+    },
+    {
+      "zh": "纯白背景",
+      "en": "white background",
+      "cat": "scene",
+      "note": "做立绘、素材图必备"
+    },
+    {
+      "zh": "简单背景",
+      "en": "simple background",
+      "cat": "scene"
+    },
+    {
+      "zh": "渐变背景",
+      "en": "gradient background",
+      "cat": "scene"
+    },
+    {
+      "zh": "透明背景",
+      "en": "transparent background",
+      "cat": "scene"
+    },
+    {
+      "zh": "景深",
+      "en": "depth of field",
+      "cat": "scene"
+    },
+    {
+      "zh": "室内",
+      "en": "indoors",
+      "cat": "scene"
+    },
+    {
+      "zh": "室外",
+      "en": "outdoors",
+      "cat": "scene"
+    },
+    {
+      "zh": "晴空",
+      "en": "clear sky",
+      "cat": "weather"
+    },
+    {
+      "zh": "多云",
+      "en": "cloudy",
+      "cat": "weather"
+    },
+    {
+      "zh": "阴天",
+      "en": "overcast",
+      "cat": "weather"
+    },
+    {
+      "zh": "下雨",
+      "en": "rain",
+      "cat": "weather"
+    },
+    {
+      "zh": "暴雨",
+      "en": "heavy rain",
+      "cat": "weather"
+    },
+    {
+      "zh": "细雨",
+      "en": "drizzle",
+      "cat": "weather"
+    },
+    {
+      "zh": "雷暴",
+      "en": "thunderstorm",
+      "cat": "weather"
+    },
+    {
+      "zh": "闪电",
+      "en": "lightning",
+      "cat": "weather"
+    },
+    {
+      "zh": "下雪",
+      "en": "snow",
+      "cat": "weather"
+    },
+    {
+      "zh": "暴风雪",
+      "en": "blizzard",
+      "cat": "weather"
+    },
+    {
+      "zh": "雾",
+      "en": "fog",
+      "cat": "weather"
+    },
+    {
+      "zh": "薄雾",
+      "en": "haze",
+      "cat": "weather"
+    },
+    {
+      "zh": "暴风雨",
+      "en": "storm",
+      "cat": "weather"
+    },
+    {
+      "zh": "风",
+      "en": "wind",
+      "cat": "weather"
+    },
+    {
+      "zh": "彩虹",
+      "en": "rainbow",
+      "cat": "weather"
+    },
+    {
+      "zh": "白天",
+      "en": "day",
+      "cat": "weather"
+    },
+    {
+      "zh": "夜晚",
+      "en": "night",
+      "cat": "weather"
+    },
+    {
+      "zh": "黎明",
+      "en": "dawn",
+      "cat": "weather"
+    },
+    {
+      "zh": "黄昏",
+      "en": "dusk",
+      "cat": "weather"
+    },
+    {
+      "zh": "暮色",
+      "en": "twilight",
+      "cat": "weather"
+    },
+    {
+      "zh": "黄金时刻",
+      "en": "golden hour",
+      "cat": "weather",
+      "note": "日出后/日落前一小时，暖光长影"
+    },
+    {
+      "zh": "蓝调时刻",
+      "en": "blue hour",
+      "cat": "weather"
+    },
+    {
+      "zh": "午夜",
+      "en": "midnight",
+      "cat": "weather"
+    },
+    {
+      "zh": "秋天",
+      "en": "autumn",
+      "cat": "weather"
+    },
+    {
+      "zh": "冬天",
+      "en": "winter",
+      "cat": "weather"
+    },
+    {
+      "zh": "夏天",
+      "en": "summer",
+      "cat": "weather"
+    },
+    {
+      "zh": "春天",
+      "en": "spring",
+      "cat": "weather"
+    },
+    {
+      "zh": "最差质量",
+      "en": "worst quality",
+      "cat": "negative",
+      "note": "效果弱，不如直接写具体缺陷"
+    },
+    {
+      "zh": "低质量",
+      "en": "low quality",
+      "cat": "negative"
+    },
+    {
+      "zh": "普通质量",
+      "en": "normal quality",
+      "cat": "negative"
+    },
+    {
+      "zh": "解剖错误",
+      "en": "bad anatomy",
+      "cat": "negative"
+    },
+    {
+      "zh": "手部错误",
+      "en": "bad hands",
+      "cat": "negative"
+    },
+    {
+      "zh": "比例错误",
+      "en": "bad proportions",
+      "cat": "negative"
+    },
+    {
+      "zh": "畸形",
+      "en": "deformed",
+      "cat": "negative"
+    },
+    {
+      "zh": "毁容",
+      "en": "disfigured",
+      "cat": "negative"
+    },
+    {
+      "zh": "变异",
+      "en": "mutated",
+      "cat": "negative"
+    },
+    {
+      "zh": "多余肢体",
+      "en": "extra limbs",
+      "cat": "negative"
+    },
+    {
+      "zh": "多余手指",
+      "en": "extra fingers",
+      "cat": "negative"
+    },
+    {
+      "zh": "缺手指",
+      "en": "missing fingers",
+      "cat": "negative"
+    },
+    {
+      "zh": "手指粘连",
+      "en": "fused fingers",
+      "cat": "negative"
+    },
+    {
+      "zh": "四肢畸形",
+      "en": "malformed limbs",
+      "cat": "negative"
+    },
+    {
+      "zh": "长脖子",
+      "en": "long neck",
+      "cat": "negative"
+    },
+    {
+      "zh": "模糊",
+      "en": "blurry",
+      "cat": "negative"
+    },
+    {
+      "zh": "JPEG 压缩痕迹",
+      "en": "jpeg artifacts",
+      "cat": "negative"
+    },
+    {
+      "zh": "噪点",
+      "en": "noise",
+      "cat": "negative"
+    },
+    {
+      "zh": "颗粒",
+      "en": "grain",
+      "cat": "negative"
+    },
+    {
+      "zh": "过饱和",
+      "en": "oversaturated",
+      "cat": "negative"
+    },
+    {
+      "zh": "水印",
+      "en": "watermark",
+      "cat": "negative",
+      "note": "最该常驻的负面词之一"
+    },
+    {
+      "zh": "签名",
+      "en": "signature",
+      "cat": "negative"
+    },
+    {
+      "zh": "用户名",
+      "en": "username",
+      "cat": "negative"
+    },
+    {
+      "zh": "logo",
+      "en": "logo",
+      "cat": "negative"
+    },
+    {
+      "zh": "文字",
+      "en": "text",
+      "cat": "negative",
+      "note": "不想要画面出字时必加"
+    },
+    {
+      "zh": "版权名",
+      "en": "copyright name",
+      "cat": "negative"
+    },
+    {
+      "zh": "被裁切",
+      "en": "cropped",
+      "cat": "negative"
+    },
+    {
+      "zh": "出画",
+      "en": "out of frame",
+      "cat": "negative"
+    },
+    {
+      "zh": "截断",
+      "en": "cut off",
+      "cat": "negative"
+    },
+    {
+      "zh": "平铺重复",
+      "en": "tiling",
+      "cat": "negative"
+    },
+    {
+      "zh": "主体重复",
+      "en": "repeated subject",
+      "cat": "negative"
+    },
+    {
+      "zh": "杂乱背景",
+      "en": "busy background",
+      "cat": "negative"
+    },
+    {
+      "zh": "拥挤背景",
+      "en": "cluttered background",
+      "cat": "negative"
+    },
+    {
+      "zh": "分散注意的背景",
+      "en": "distracting background",
+      "cat": "negative"
+    },
+    {
+      "zh": "动漫",
+      "en": "anime",
+      "cat": "negative"
+    },
+    {
+      "zh": "草稿",
+      "en": "sketch",
+      "cat": "negative"
+    },
+    {
+      "zh": "电脑渲染感",
+      "en": "cgi",
+      "cat": "negative"
+    },
+    {
+      "zh": "照片感",
+      "en": "photograph",
+      "cat": "negative",
+      "note": "想要二次元时反向压制"
+    },
+    {
+      "zh": "灰度",
+      "en": "grayscale",
+      "cat": "negative"
+    },
+    {
+      "zh": "打码",
+      "en": "censored",
+      "cat": "negative",
+      "note": "Pony / NoobAI 系常用负面"
+    },
+    {
+      "zh": "兽人来源",
+      "en": "source_furry",
+      "cat": "negative"
+    },
+    {
+      "zh": "小马来源",
+      "en": "source_pony",
+      "cat": "negative"
+    },
+    {
+      "zh": "卡通来源",
+      "en": "source_cartoon",
+      "cat": "negative"
+    },
+    {
+      "zh": "动漫来源",
+      "en": "source_anime",
+      "cat": "negative"
+    },
+    {
+      "zh": "最差美观度",
+      "en": "worst aesthetic",
+      "cat": "negative"
+    },
+    {
+      "zh": "丑",
+      "en": "ugly",
+      "cat": "negative"
+    },
+    {
+      "zh": "眼睛画错",
+      "en": "inaccurate eyes",
+      "cat": "negative"
+    },
+    {
+      "zh": "眼睛不对称",
+      "en": "asymmetric eyes",
+      "cat": "negative"
+    },
+    {
+      "zh": "斗鸡眼",
+      "en": "crossed eyes",
+      "cat": "negative"
+    },
+    {
+      "zh": "瞳孔不一致",
+      "en": "mismatched pupils",
+      "cat": "negative"
+    },
+    {
+      "zh": "荷兰角",
+      "en": "dutch angle",
+      "cat": "camera",
+      "note": "画面倾斜，制造不安感"
+    },
+    {
+      "zh": "过肩镜头",
+      "en": "over the shoulder",
+      "cat": "camera"
+    },
+    {
+      "zh": "第一人称视角",
+      "en": "pov",
+      "cat": "camera"
+    },
+    {
+      "zh": "自拍",
+      "en": "selfie",
+      "cat": "camera"
+    },
+    {
+      "zh": "鱼眼",
+      "en": "fish-eye",
+      "cat": "camera"
+    },
+    {
+      "zh": "全景",
+      "en": "panorama",
+      "cat": "camera"
+    },
+    {
+      "zh": "航拍视角",
+      "en": "aerial view",
+      "cat": "camera"
+    },
+    {
+      "zh": "鸟瞰",
+      "en": "bird eye view",
+      "cat": "camera"
+    },
+    {
+      "zh": "虫眼视角",
+      "en": "worm eye view",
+      "cat": "camera"
+    },
+    {
+      "zh": "远景",
+      "en": "long shot",
+      "cat": "camera"
+    },
+    {
+      "zh": "中景",
+      "en": "medium shot",
+      "cat": "camera"
+    },
+    {
+      "zh": "大特写",
+      "en": "extreme close-up",
+      "cat": "camera"
+    },
+    {
+      "zh": "四分之三侧面",
+      "en": "three-quarter view",
+      "cat": "camera"
+    },
+    {
+      "zh": "正侧面",
+      "en": "profile",
+      "cat": "camera"
+    },
+    {
+      "zh": "正面",
+      "en": "front view",
+      "cat": "camera"
+    },
+    {
+      "zh": "背面",
+      "en": "rear view",
+      "cat": "camera"
+    },
+    {
+      "zh": "移轴",
+      "en": "tilt shift",
+      "cat": "camera"
+    },
+    {
+      "zh": "动态模糊",
+      "en": "motion blur",
+      "cat": "camera"
+    },
+    {
+      "zh": "光束",
+      "en": "light rays",
+      "cat": "camera"
+    },
+    {
+      "zh": "镜头光晕",
+      "en": "lens flare",
+      "cat": "camera"
+    },
+    {
+      "zh": "光斑背景",
+      "en": "bokeh background",
+      "cat": "camera"
+    },
+    {
+      "zh": "留白",
+      "en": "negative space",
+      "cat": "camera"
+    },
+    {
+      "zh": "取景框",
+      "en": "framing",
+      "cat": "camera"
+    },
+    {
+      "zh": "暗角",
+      "en": "vignette",
+      "cat": "camera"
+    },
+    {
+      "zh": "宽幅构图",
+      "en": "wide composition",
+      "cat": "camera"
+    },
+    {
+      "zh": "奇数律构图",
+      "en": "rule of odds",
+      "cat": "camera"
+    },
+    {
+      "zh": "对角线构图",
+      "en": "diagonal composition",
+      "cat": "camera"
+    },
+    {
+      "zh": "三角构图",
+      "en": "triangular composition",
+      "cat": "camera"
+    },
+    {
+      "zh": "变形宽银幕镜头",
+      "en": "anamorphic lens",
+      "cat": "camera"
+    },
+    {
+      "zh": "黄金时刻光线",
+      "en": "golden hour lighting",
+      "cat": "camera"
+    },
+    {
+      "zh": "蓝调光线",
+      "en": "blue hour lighting",
+      "cat": "camera"
+    },
+    {
+      "zh": "丁达尔光束",
+      "en": "god rays",
+      "cat": "camera"
+    },
+    {
+      "zh": "强光",
+      "en": "harsh light",
+      "cat": "camera"
+    },
+    {
+      "zh": "漫射光",
+      "en": "diffused light",
+      "cat": "camera"
+    },
+    {
+      "zh": "窗光",
+      "en": "window light",
+      "cat": "camera"
+    },
+    {
+      "zh": "烛光",
+      "en": "candlelight",
+      "cat": "camera"
+    },
+    {
+      "zh": "火光",
+      "en": "firelight",
+      "cat": "camera"
+    },
+    {
+      "zh": "月光",
+      "en": "moonlight",
+      "cat": "camera"
+    },
+    {
+      "zh": "阳光",
+      "en": "sunlight",
+      "cat": "camera"
+    },
+    {
+      "zh": "棚拍灯",
+      "en": "studio lighting",
+      "cat": "camera"
+    },
+    {
+      "zh": "三点布光",
+      "en": "three point lighting",
+      "cat": "camera"
+    },
+    {
+      "zh": "分割光",
+      "en": "split lighting",
+      "cat": "camera"
+    },
+    {
+      "zh": "蝴蝶光",
+      "en": "butterfly lighting",
+      "cat": "camera"
+    },
+    {
+      "zh": "逆光剪影",
+      "en": "backlit silhouette",
+      "cat": "camera"
+    },
+    {
+      "zh": "明暗对照",
+      "en": "chiaroscuro",
+      "cat": "camera"
+    },
+    {
+      "zh": "戏剧性光影",
+      "en": "dramatic lighting",
+      "cat": "camera"
+    },
+    {
+      "zh": "柔和阴影",
+      "en": "soft shadow",
+      "cat": "camera"
+    },
+    {
+      "zh": "硬阴影",
+      "en": "hard shadow",
+      "cat": "camera"
+    },
+    {
+      "zh": "焦散",
+      "en": "caustics",
+      "cat": "camera"
+    },
+    {
+      "zh": "哑光",
+      "en": "matte",
+      "cat": "material"
+    },
+    {
+      "zh": "亮面",
+      "en": "glossy",
+      "cat": "material"
+    },
+    {
+      "zh": "铬金属",
+      "en": "chrome",
+      "cat": "material"
+    },
+    {
+      "zh": "拉丝金属",
+      "en": "brushed metal",
+      "cat": "material"
+    },
+    {
+      "zh": "天鹅绒",
+      "en": "velvet",
+      "cat": "material"
+    },
+    {
+      "zh": "缎面",
+      "en": "satin",
+      "cat": "material"
+    },
+    {
+      "zh": "牛仔布",
+      "en": "denim",
+      "cat": "material"
+    },
+    {
+      "zh": "针织",
+      "en": "knit",
+      "cat": "material"
+    },
+    {
+      "zh": "毛皮",
+      "en": "fur",
+      "cat": "material"
+    },
+    {
+      "zh": "羽毛",
+      "en": "feathers",
+      "cat": "material"
+    },
+    {
+      "zh": "大理石",
+      "en": "marble",
+      "cat": "material"
+    },
+    {
+      "zh": "混凝土",
+      "en": "concrete",
+      "cat": "material"
+    },
+    {
+      "zh": "木纹",
+      "en": "wood texture",
+      "cat": "material"
+    },
+    {
+      "zh": "锈迹",
+      "en": "rust",
+      "cat": "material"
+    },
+    {
+      "zh": "水珠",
+      "en": "water droplets",
+      "cat": "material"
+    },
+    {
+      "zh": "次表面散射",
+      "en": "subsurface scattering",
+      "cat": "material",
+      "note": "皮肤通透感的关键词"
+    },
+    {
+      "zh": "自发光",
+      "en": "emissive",
+      "cat": "material"
+    },
+    {
+      "zh": "虹彩",
+      "en": "iridescent",
+      "cat": "material"
+    },
+    {
+      "zh": "怀旧",
+      "en": "nostalgic",
+      "cat": "mood"
+    },
+    {
+      "zh": "充满希望",
+      "en": "hopeful",
+      "cat": "mood"
+    },
+    {
+      "zh": "紧张",
+      "en": "tense",
+      "cat": "mood"
+    },
+    {
+      "zh": "平和",
+      "en": "peaceful",
+      "cat": "mood"
+    },
+    {
+      "zh": "混乱",
+      "en": "chaotic",
+      "cat": "mood"
+    },
+    {
+      "zh": "未来感",
+      "en": "futuristic",
+      "cat": "mood"
+    },
+    {
+      "zh": "古老",
+      "en": "ancient",
+      "cat": "mood"
+    },
+    {
+      "zh": "神圣",
+      "en": "sacred",
+      "cat": "mood"
+    },
+    {
+      "zh": "诡异",
+      "en": "creepy",
+      "cat": "mood"
+    },
+    {
+      "zh": "温馨治愈",
+      "en": "wholesome",
+      "cat": "mood"
+    },
+    {
+      "zh": "忧郁感",
+      "en": "melancholic",
+      "cat": "mood"
+    },
+    {
+      "zh": "浪漫",
+      "en": "romantic",
+      "cat": "mood"
+    },
+    {
+      "zh": "性感",
+      "en": "sensual",
+      "cat": "mood"
+    },
+    {
+      "zh": "俏皮",
+      "en": "playful",
+      "cat": "mood"
+    },
+    {
+      "zh": "阴森",
+      "en": "eerie",
+      "cat": "mood"
+    },
+    {
+      "zh": "1:1 方形",
+      "en": "1:1 aspect ratio",
+      "cat": "format"
+    },
+    {
+      "zh": "3:2 比例",
+      "en": "3:2 aspect ratio",
+      "cat": "format"
+    },
+    {
+      "zh": "4:3 比例",
+      "en": "4:3 aspect ratio",
+      "cat": "format"
+    },
+    {
+      "zh": "21:9 宽银幕",
+      "en": "21:9 aspect ratio",
+      "cat": "format"
+    },
+    {
+      "zh": "横幅",
+      "en": "banner",
+      "cat": "format"
+    },
+    {
+      "zh": "壁纸",
+      "en": "wallpaper",
+      "cat": "format"
+    },
+    {
+      "zh": "角色设定表",
+      "en": "character sheet",
+      "cat": "format",
+      "note": "多视角 + 表情，做参考图很好用"
+    },
+    {
+      "zh": "参考图板",
+      "en": "reference sheet",
+      "cat": "format"
+    },
+    {
+      "zh": "多视角",
+      "en": "multiple views",
+      "cat": "format"
+    },
+    {
+      "zh": "肖像特写",
+      "en": "close-up portrait",
+      "cat": "format"
+    },
+    {
+      "zh": "游戏立绘素材",
+      "en": "sprite",
+      "cat": "format"
+    },
+    {
+      "zh": "图标",
+      "en": "icon",
+      "cat": "format"
+    },
+    {
+      "zh": "贴纸",
+      "en": "sticker",
+      "cat": "format"
+    },
+    {
+      "zh": "明信片",
+      "en": "postcard",
       "cat": "format"
     }
   ],

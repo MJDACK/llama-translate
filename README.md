@@ -159,11 +159,25 @@ csc /target:winexe /out:提示词翻译台.exe /win32icon:app.ico Launcher.cs
 - 系统提示词只存在浏览器 localStorage 里，对话记录也是（`清空对话` 只清消息，不动提示词）。
 - 每轮请求就是 `system(你的提示词) + 历史 + 本轮用户消息(+图)`，没加任何私货。
 
-**词典 2.0**（右上角按钮）：整屏三栏面板——左边分类，中间标签墙，右边已选和提示词。182 条 AI 绘画常用词，分 8 类。输入里命中的词条会自动塞进提示词，强制模型用指定译法（`洛丽塔 → lolita fashion`、`浅景深 → shallow depth of field`）；英译中时反过来用（`backlighting → 逆光`）。
+**词典 2.0**（右上角按钮）：整屏三栏面板——左边分类，中间标签墙，右边已选和提示词。**835 条** AI 绘画常用词，分 **17 类**。输入里命中的词条会自动塞进提示词，强制模型用指定译法（`洛丽塔 → lolita fashion`、`浅景深 → shallow depth of field`）；英译中时反过来用（`backlighting → 逆光`）。
+
+分类和条数：
+
+| 分类 | 条数 | 分类 | 条数 |
+|---|---|---|---|
+| 风格 / 画派 | 95 | 画师风格 | 59 |
+| 镜头 / 光线 / 构图 | 81 | 姿势动作 | 48 |
+| 场景 / 环境 | 82 | 发型发色 | 39 |
+| 人物 / 服饰 | 71 | 表情 | 29 |
+| 服饰 | 68 | 面部特征 | 23 |
+| 负面词 | 50 | 材质 / 特效 | 34 |
+| 道具 | 44 | 氛围 / 情绪 | 28 |
+| 画质 / 质感 | 35 | 天气 | 27 |
+| 画幅 / 用途 | 22 | | |
 
 怎么用：
 
-- **左栏点分类**：全部 / ★ 收藏 / 最近使用 / 8 个分类（都带条数）。
+- **左栏点分类**：全部 / ★ 收藏 / 最近使用 / 17 个分类（都带条数）。
 - **中间点标签**：点一下加入右边，再点取消；`Shift + 点` 按当前权重加入（默认 1.2）。标签上鼠标悬停会显示用法提示。
 - **右边实时拼提示词**：已选标签可单个 ✕，下面是拼好的 `masterpiece, best quality, (volumetric lighting:1.2)`，带 token 粗估，`复制` 一键拿走。
 - **搜索**：中文、英文、别名、分类名都能搜（`光斑`/`焦外` → bokeh，搜「镜头」出整组）。
@@ -178,7 +192,13 @@ csc /target:winexe /out:提示词翻译台.exe /win32icon:app.ico Launcher.cs
 - **导出 / 导入**：`导出` 下载 JSON（同时写剪贴板，内嵌窗口偶尔不让下载），`导入` 合并别人的词条，重复的自动跳过。
 - **加词**：右边最底部一行，填中文/英文/分类就能加，写回 `glossary.json`。
 
-词条结构：`{zh, en, cat, note?, aliases?}`，`glossary.json` 里 `version: 2`。想批量补 note 用 `tools/enrich-glossary.mjs`。
+补充的 653 条覆盖了 Anima / Pony / NoobAI 那套常用写法（`score_9`、`absurdres`、`source_furry`、`newest`）、59 个画师名、48 个姿势、Danbooru 风格的 `1girl / solo / from behind`，以及一套缺陷定向的负面词（`bad hands`、`extra fingers`、`watermark`、`jpeg artifacts`）。负面词的取舍参考了「少而准」的实践：`worst quality / lowres` 这类抽象词实际很弱，具体缺陷（`extra fingers`、`watermark`）更有效；Pony 系另有自己的一套（`score_4`、`censored`、`source_furry`）。来源参考：[Danbooru tag taxonomy](https://huggingface.co/datasets/Mexes/danbooru-tag-taxonomy)、[negative prompts 实践说明](https://github.com/moms-organic-agent-lab/comfyclaw/blob/543265d0011dcd098c43039190284ffdd5507ff1/comfyclaw/skills/negative-prompts/SKILL.md)。
+
+词条结构：`{zh, en, cat, note?, aliases?}`，`glossary.json` 里 `version: 3`。
+
+- 批量补 note：`node tools/enrich-glossary.mjs`
+- 批量扩词：`node tools/expand-glossary.mjs`（按 `en` 去重，可以反复跑）
+- 翻译匹配时会跳过**单字中文**词条（`风`、`花`、`雪` 这种到处都能撞上，强制替换会毁掉译文）。
 
 **释放显存**（右上角按钮）：停掉本地 `llama-server`，把显存还给显卡（4B 模型约 4 GB）。状态会变成「模型已释放 · 显存空出」。下次翻译、识图、改写时自动重新拉起（约 17 秒），不用手点重启。接着外部 llama-server 时这个按钮不生效（返回 409，本程序停不了别人的进程）。
 
@@ -337,7 +357,8 @@ llama-translate/                         源码仓库约 1 MB（不含运行时�
 ├─ server.js            后端（起服务、切句、调模型）
 ├─ test_all.mjs         接口自测：node test_all.mjs（16 项：翻译/反译/生成/改块/改输入/识图/切模型）
 ├─ config.json          模型与端口配置（相对路径）
-├─ glossary.json        AI 绘画词典
+├─ glossary.json        AI 绘画词典（835 条 / 17 类）
+├─ tools/               enrich-glossary.mjs 补提示、expand-glossary.mjs 扩词
 ├─ web/                 界面（index.html / style.css / app.js）
 ├─ app.ico / app.png    图标
 ├─ tools/               build-lite.ps1 / build-full.ps1

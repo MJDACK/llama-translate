@@ -747,6 +747,8 @@ function matchGlossary(text, dir = 'zh2en') {
   for (const e of glossary.entries || []) {
     if (!e.zh || !e.en) continue;
     if (e.cat && !cats.has(e.cat)) continue;
+    // 单字中文（风/花/雪/雾）到处都能撞上，别让它强制替换
+    if (!toZh && String(e.zh).length < 2) continue;
     const key = toZh ? e.en.toLowerCase() : e.zh;
     if (hay.includes(key) && !seen.has(key)) {
       seen.add(key);
