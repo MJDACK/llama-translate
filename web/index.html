@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>提示词翻译台 · llama.cpp</title>
-<link rel="stylesheet" href="style.css?v=38">
+<link rel="stylesheet" href="style.css?v=48">
 </head>
 <body>
 
@@ -193,21 +193,63 @@
   </section>
 </main>
 
-<aside class="drawer" id="drawer" hidden>
+<aside class="drawer ddrawer" id="drawer" hidden>
   <div class="dhead">
-    <strong>AI 绘画词典</strong>
+    <strong>AI 绘画词典 <em class="dver">2.0</em></strong>
     <span class="dsub" id="dictSub">–</span>
     <div class="grow"></div>
     <button class="btn sm" id="btnCloseDrawer">关闭</button>
   </div>
-  <div class="dbody">
+
+  <div class="dtabs">
+    <button class="dtab active" data-dtab="lib">词库</button>
+    <button class="dtab" data-dtab="rev">反查 prompt</button>
+  </div>
+
+  <div class="dbody" id="dictLib">
     <div class="dsearch">
-      <input id="dictSearch" type="search" placeholder="搜中文或英文…">
-      <label class="chk" title="取消勾选会停用全部词条"><input type="checkbox" id="dictAll" checked><span>全部启用</span></label>
+      <input id="dictSearch" type="search" placeholder="搜中文 / 英文 / 别名…">
+      <label class="chk" title="取消勾选会停用全部词条"><input type="checkbox" id="dictAll" checked><span>全开</span></label>
+    </div>
+    <div class="drow">
+      <span class="dhint" title="启用 = 翻译时强制模型使用这个译法；关掉只是不在翻译里强制，词条照样能查能复制">启用=翻译强制译法</span>
+      <div class="grow"></div>
+      <select id="dWeight" class="sel sm" title="点词条复制时的格式">
+        <option value="">裸词</option>
+        <option value="1.1">权重 1.1</option>
+        <option value="1.2">权重 1.2</option>
+        <option value="1.3">权重 1.3</option>
+        <option value="1.4">权重 1.4</option>
+      </select>
+      <button class="btn sm ghost" id="btnDictExport" title="导出全部词条为 JSON">导出</button>
+      <button class="btn sm ghost" id="btnDictImport" title="从 JSON 导入词条">导入</button>
+      <input type="file" id="dictFile" accept=".json,application/json" hidden>
     </div>
     <div class="dcats" id="dictCats"></div>
     <div class="dlist" id="dictList"></div>
   </div>
+
+  <div class="dbody" id="dictRev" hidden>
+    <textarea id="revText" class="revtext" spellcheck="false" placeholder="把别人给的英文 prompt 粘进来（逗号/换行分隔都行），下面逐段给你中文和用法提示。"></textarea>
+    <div class="drow">
+      <button class="btn sm primary" id="btnRevRun">分析</button>
+      <button class="btn sm ghost" id="btnRevCopy">复制中文</button>
+      <div class="grow"></div>
+      <span class="dhint" id="revStat"></span>
+    </div>
+    <div class="dlist" id="revList"></div>
+  </div>
+
+  <div class="dbuild">
+    <div class="dbuildHead">
+      <span>组合台 <em id="dSelCount">0</em></span>
+      <div class="grow"></div>
+      <button class="btn sm ghost" id="dSelClear">清空</button>
+      <button class="btn sm primary" id="dSelCopy">复制组合</button>
+    </div>
+    <div class="dbuildText" id="dSelText">点词条右边的 ＋ 加进来，拼成一句一起复制</div>
+  </div>
+
   <div class="dadd">
     <div class="daddRow">
       <input id="newZh" placeholder="中文">
@@ -282,6 +324,6 @@
 </aside>
 
 <div class="toast" id="toast" hidden></div>
-<script src="app.js?v=38"></script>
+<script src="app.js?v=48"></script>
 </body>
 </html>

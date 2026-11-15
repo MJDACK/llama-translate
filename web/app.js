@@ -22,6 +22,7 @@ const S = {
   tab: 'text',         // 当前页签
   providers: null,     // { active, list: [...] } 模型来源
   custom: { system: '', messages: [], images: [] },   // 自定义系统提示词 + 对话（可多图）
+  dict: { fav: [], recent: [], weight: '', sel: [], tab: 'lib' },   // 词典 2.0：收藏/最近/复制格式/组合台
   noSync: false        // 翻译/生成进行中，先别回写输入框（避免闪空）
 };
 
@@ -95,6 +96,7 @@ const saveLocal = debounce(() => {
       imgMode: S.imgMode,
       sysText: $('#sysText') ? $('#sysText').value : (S.custom && S.custom.system) || '',
       cDeep: $('#cDeep') ? $('#cDeep').checked : true,
+      dict: S.dict,
       chatMsgs: ((S.custom && S.custom.messages) || []).map(m => ({ role: m.role, content: m.content })),
       outH: outHeight,
       chatH: chatH,
@@ -126,6 +128,17 @@ function restoreLocal() {
     if (d.imgMode) S.imgMode = d.imgMode;
     if (typeof d.sysText === 'string' && $('#sysText')) $('#sysText').value = d.sysText;
     if (typeof d.cDeep === 'boolean' && $('#cDeep')) $('#cDeep').checked = d.cDeep;
+    if (d.dict && typeof d.dict === 'object') {
+      S.dict = {
+        fav: Array.isArray(d.dict.fav) ? d.dict.fav : [],
+        recent: Array.isArray(d.dict.recent) ? d.dict.recent : [],
+        sel: Array.isArray(d.dict.sel) ? d.dict.sel : [],
+        weight: typeof d.dict.weight === 'string' ? d.dict.weight : '',
+        tab: d.dict.tab === 'rev' ? 'rev' : 'lib'
+      };
+      const wSel = document.getElementById('dWeight');
+      if (wSel) wSel.value = S.dict.weight || '';
+    }
     if (Array.isArray(d.chatMsgs)) {
       S.custom = S.custom || { system: '', messages: [], images: [] };
       S.custom.messages = d.chatMsgs
@@ -874,10 +887,35 @@ async function sendCustom() {
 }
 
 
-/* ------------------------------ 词典 ------------------------------ */
+/* ------------------------------ 词典 2.0 ------------------------------ */
+// 收藏 / 最近 / 复制格式 / 组合台，全在 localStorage（不动 glossary.json 的语义）
+function dictState() {
+  if (!S.dict) S.dict = { fav: [], recent: [], weight: '', sel: [], tab: 'lib' };
+  S.dict.fav = S.dict.fav || [];
+  S.dict.recent = S.dict.recent || [];
+  S.dict.sel = S.dict.sel || [];
+  return S.dict;
+}
+
+function dictEntryByEn(en) {
+  return (S.glossary.entries || []).find(e => e.en === en) || null;
+}
+
+// 一个词条按当前格式输出：裸词 → masterpiece ；权重 → (masterpiece:1.2)
+function dictFormat(en) {
+  const w = dictState().weight;
+  return w ? '(' + en + ':' + w + ')' : en;
+}
+
+function dictTouch(en) {
+  const d = dictState();
+  d.recent = [en].concat(d.recent.filter(x => x !== en)).slice(0, 12);
+}
+
 function renderDict() {
   const g = S.glossary;
   if (!g) return;
+  const st = dictState();
   const cats = g.categories || [];
   $('#dictCats').innerHTML = cats.map(c =>
     '<label class="dcat ' + (c.enabled ? 'on' : '') + '" data-cat="' + c.id + '">' +
@@ -887,32 +925,119 @@ function renderDict() {
   const q = ($('#dictSearch').value || '').trim().toLowerCase();
   const catName = {};
   cats.forEach(c => { catName[c.id] = c.name; });
+
+  const hit = (e) => {
+    if (!q) return true;
+    const hay = [e.zh, e.en, e.note || '', (e.aliases || []).join(' '), catName[e.cat] || ''].join(' ').toLowerCase();
+    return hay.includes(q);
+  };
+  const row = (e) => {
+    const fav = st.fav.includes(e.en);
+    const picked = st.sel.includes(e.en);
+    return '<div class="ditem' + (picked ? ' picked' : '') + '" data-en="' + esc(e.en) + '">' +
+      '<span class="z">' + esc(e.zh) + '</span>' +
+      '<span class="e">' + esc(e.en) + '</span>' +
+      '<button class="dstar' + (fav ? ' on' : '') + '" data-act="fav" title="收藏">' + (fav ? '★' : '☆') + '</button>' +
+      '<button class="dplus" data-act="plus" title="加入组合台">＋</button>' +
+      '</div>' +
+      (e.note ? '<div class="dnote">' + esc(e.note) + '</div>' : '');
+  };
+
+  const parts = [];
+  // 收藏 + 最近，只在没搜索时置顶
+  if (!q) {
+    const favs = st.fav.map(dictEntryByEn).filter(Boolean);
+    if (favs.length) {
+      parts.push('<div class="dgroup fav">收藏 · ' + favs.length + '</div>');
+      favs.forEach(e => parts.push(row(e)));
+    }
+    const recents = st.recent.map(dictEntryByEn).filter(e => e && !st.fav.includes(e.en));
+    if (recents.length) {
+      parts.push('<div class="dgroup">最近用 · ' + recents.length + '</div>');
+      recents.forEach(e => parts.push(row(e)));
+    }
+  }
+
   const groups = {};
   for (const e of g.entries) {
-    if (q && !(e.zh.toLowerCase().includes(q) || e.en.toLowerCase().includes(q))) continue;
+    if (st.fav.includes(e.en)) continue;                        // 已经在收藏区显示
+    if (!q && st.recent.includes(e.en)) continue;               // 已经在最近区显示
+    if (!hit(e)) continue;
     (groups[e.cat] = groups[e.cat] || []).push(e);
   }
-  const parts = [];
   for (const c of cats) {
     const list = groups[c.id];
     if (!list || !list.length) continue;
     parts.push('<div class="dgroup">' + esc(catName[c.id] || c.id) + ' · ' + list.length + '</div>');
-    for (const e of list) {
-      parts.push('<div class="ditem" data-en="' + esc(e.en) + '">' +
-        '<span class="z">' + esc(e.zh) + '</span>' +
-        '<span class="e">' + esc(e.en) + '</span>' +
-        '<span class="tick">已复制</span></div>');
-    }
+    list.forEach(e => parts.push(row(e)));
   }
-  $('#dictList').innerHTML = parts.join('') || '<div class="dgroup">没找到</div>';
+  $('#dictList').innerHTML = parts.join('') || '<div class="dgroup">没找到（试试别的说法，或点下面「添加」）</div>';
+
   const total = g.entries.length;
-  const on = g.entries.filter(e => {
-    const c = cats.find(x => x.id === e.cat);
-    return c && c.enabled;
-  }).length;
-  $('#dictSub').textContent = on + '/' + total + ' 条启用';
-  $('#dictCount').textContent = on;
+  const on = g.entries.filter(e => (cats.find(x => x.id === e.cat) || {}).enabled).length;
+  $('#dictSub').textContent = 'v' + (g.version || 1) + ' · ' + total + ' 条 · ' + on + ' 条启用';
+  $('#dictCount').textContent = total;
   $('#newCat').innerHTML = cats.map(c => '<option value="' + c.id + '">' + esc(c.name) + '</option>').join('');
+
+  renderDictBuild();
+}
+
+function renderDictBuild() {
+  const st = dictState();
+  $('#dSelCount').textContent = st.sel.length;
+  const txt = st.sel.map(dictFormat).join(', ');
+  $('#dSelText').textContent = txt || '点词条右边的 ＋ 加进来，拼成一句一起复制';
+  $('#dSelText').classList.toggle('noSel', !st.sel.length);
+}
+
+// 反查：把一段英文 prompt 拆开，逐段找词条
+function runRev() {
+  const g = S.glossary;
+  if (!g) return;
+  const raw = ($('#revText').value || '').trim();
+  if (!raw) { toast('先粘一段 prompt'); return; }
+  const segs = raw.split(/[,，\n;；]+/).map(s => s.trim()).filter(Boolean);
+  const norm = (s) => s.toLowerCase().replace(/[()\[\]{}:0-9.]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const byEn = {};
+  for (const e of g.entries) byEn[norm(e.en)] = e;
+
+  const out = [];
+  let hitCount = 0;
+  for (const seg of segs) {
+    const n = norm(seg);
+    let e = byEn[n] || null;
+    if (!e) {
+      // 退一步：包含匹配（处理 "beautiful cyberpunk city at night" 这类）
+      e = g.entries.find(x => {
+        const en = norm(x.en);
+        return en && en.length > 3 && (n === en || n.includes(en) || en.includes(n));
+      }) || null;
+    }
+    if (e) hitCount++;
+    out.push('<div class="ditem revhit' + (e ? '' : ' miss') + '" data-en="' + esc(e ? e.en : seg) + '">' +
+      '<span class="z">' + esc(e ? e.zh : '—') + '</span>' +
+      '<span class="e">' + esc(seg) + '</span></div>' +
+      (e && e.note ? '<div class="dnote">' + esc(e.note) + '</div>' : ''));
+  }
+  $('#revList').innerHTML = out.join('') || '<div class="dgroup">没东西</div>';
+  $('#revStat').textContent = segs.length + ' 段 · 认出 ' + hitCount + ' 个词';
+  S.dictRev = segs.map(s => {
+    const n = norm(s);
+    const e = byEn[n] || g.entries.find(x => {
+      const en = norm(x.en);
+      return en && en.length > 3 && (n === en || n.includes(en) || en.includes(n));
+    });
+    return e ? e.zh : s;
+  });
+}
+
+function switchDictTab(name) {
+  const st = dictState();
+  st.tab = name;
+  $$('.dtab').forEach(b => b.classList.toggle('active', b.dataset.dtab === name));
+  $('#dictLib').hidden = name !== 'lib';
+  $('#dictRev').hidden = name !== 'rev';
+  if (name === 'rev' && !$('#revList').innerHTML) runRev();
 }
 
 async function saveGlossary() {
@@ -920,7 +1045,7 @@ async function saveGlossary() {
     await fetch('/api/glossary', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ entries: S.glossary.entries, categories: S.glossary.categories })
+      body: JSON.stringify({ entries: S.glossary.entries, categories: S.glossary.categories, version: S.glossary.version })
     });
   } catch (_) { toast('词典保存失败'); }
 }
@@ -1461,12 +1586,17 @@ function bind() {
   });
   $('#chatInput').addEventListener('input', () => autoGrow($('#chatInput')));
 
-  // 词典
-  $('#btnDict').addEventListener('click', () => { $('#drawer').hidden = false; renderDict(); });
+  // 词典 2.0
+  $('#btnDict').addEventListener('click', () => {
+    $('#drawer').hidden = false;
+    switchDictTab(dictState().tab || 'lib');
+    renderDict();
+  });
   $('#btnCloseDrawer').addEventListener('click', () => { $('#drawer').hidden = true; });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { $('#drawer').hidden = true; }
   });
+  $$('.dtab').forEach(b => b.addEventListener('click', () => switchDictTab(b.dataset.dtab)));
   $('#dictSearch').addEventListener('input', renderDict);
   $('#dictAll').addEventListener('change', (e) => {
     const all = e.target.checked;
@@ -1482,14 +1612,117 @@ function bind() {
     renderDict();
     saveGlossary();
   });
+
+  // 复制格式（裸词 / 权重）
+  $('#dWeight').value = dictState().weight;
+  $('#dWeight').addEventListener('change', (e) => {
+    dictState().weight = e.target.value;
+    renderDictBuild();
+    saveLocal();
+  });
+
+  // 词条：点行复制；★ 收藏；＋ 加入组合台
   $('#dictList').addEventListener('click', async (e) => {
+    const act = e.target.closest('[data-act]');
     const it = e.target.closest('.ditem');
     if (!it) return;
-    await copyText(it.dataset.en);
+    const en = it.dataset.en;
+    const st = dictState();
+    if (act && act.dataset.act === 'fav') {
+      st.fav = st.fav.includes(en) ? st.fav.filter(x => x !== en) : [en].concat(st.fav);
+      renderDict(); saveLocal();
+      toast(st.fav.includes(en) ? '已收藏' : '已取消收藏', 1400);
+      return;
+    }
+    if (act && act.dataset.act === 'plus') {
+      st.sel = st.sel.includes(en) ? st.sel : st.sel.concat(en);
+      dictTouch(en);
+      renderDict(); saveLocal();
+      return;
+    }
+    const text = dictFormat(en);
+    await copyText(text);
+    dictTouch(en);
     it.classList.add('copied');
-    setTimeout(() => it.classList.remove('copied'), 1200);
-    toast('已复制：' + it.dataset.en);
+    setTimeout(() => it.classList.remove('copied'), 1000);
+    toast('已复制：' + text);
+    renderDictBuild();
+    saveLocal();
   });
+
+  // 组合台
+  $('#dSelClear').addEventListener('click', () => {
+    dictState().sel = [];
+    renderDict(); saveLocal();
+  });
+  $('#dSelCopy').addEventListener('click', async () => {
+    const st = dictState();
+    if (!st.sel.length) return toast('组合台是空的');
+    const text = st.sel.map(dictFormat).join(', ');
+    await copyText(text);
+    toast('已复制 ' + st.sel.length + ' 个词');
+  });
+
+  // 反查
+  $('#btnRevRun').addEventListener('click', runRev);
+  $('#btnRevCopy').addEventListener('click', async () => {
+    if (!S.dictRev || !S.dictRev.length) return toast('先点「分析」');
+    await copyText(S.dictRev.join('，'));
+    toast('已复制中文 ' + S.dictRev.length + ' 段');
+  });
+  $('#revText').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); runRev(); }
+  });
+
+  // 导出 / 导入
+  $('#btnDictExport').addEventListener('click', async () => {
+    const data = JSON.stringify(S.glossary, null, 2);
+    // 下载 + 同时塞进剪贴板：内嵌窗口偶尔不让下载，剪贴板这条总能用
+    try {
+      const blob = new Blob([data], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'glossary-' + new Date().toISOString().slice(0, 10) + '.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    } catch (_) { }
+    const ok = await copyText(data);
+    toast('已导出 ' + S.glossary.entries.length + ' 条' + (ok ? '（JSON 也复制到剪贴板了）' : ''), 3000);
+  });
+  $('#btnDictImport').addEventListener('click', () => $('#dictFile').click());
+  $('#dictFile').addEventListener('change', async (e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    try {
+      const j = JSON.parse(await f.text());
+      const incoming = Array.isArray(j) ? j : (j.entries || []);
+      if (!Array.isArray(incoming) || !incoming.length) throw new Error('文件里没有 entries');
+      let added = 0;
+      for (const t of incoming) {
+        if (!t || !t.zh || !t.en) continue;
+        if (S.glossary.entries.some(x => x.zh === t.zh && x.en === t.en)) continue;
+        const catOk = (S.glossary.categories || []).some(c => c.id === t.cat);
+        S.glossary.entries.push({
+          zh: String(t.zh), en: String(t.en),
+          cat: catOk ? t.cat : (S.glossary.categories[0] || {}).id,
+          ...(t.note ? { note: String(t.note) } : {}),
+          ...(Array.isArray(t.aliases) && t.aliases.length ? { aliases: t.aliases.map(String) } : {})
+        });
+        added++;
+      }
+      if (Array.isArray(j.categories) && !(S.glossary.categories || []).length) S.glossary.categories = j.categories;
+      renderDict();
+      await saveGlossary();
+      toast(added ? '导入 ' + added + ' 条' : '没有新词条（都重复了）', 3000);
+    } catch (err) {
+      toast('导入失败：' + err.message, 4000);
+    }
+  });
+
+  $('#dictListCopyAll')?.addEventListener('click', () => { });
   $('#btnAddTerm').addEventListener('click', async () => {
     const zh = $('#newZh').value.trim();
     const en = $('#newEn').value.trim();
@@ -1502,7 +1735,6 @@ function bind() {
     await saveGlossary();
     toast('已加入词典');
   });
-
   $('#modelSel').addEventListener('change', (e) => switchModel(e.target.value));
 
   // 输出区：复制 / 拖动高度 / 收起
@@ -1868,11 +2100,11 @@ async function boot() {
   try {
     const g = await (await fetch('/api/glossary')).json();
     S.glossary = g;
-    const on = g.entries.filter(e => {
-      const c = g.categories.find(x => x.id === e.cat);
-      return c && c.enabled;
-    }).length;
-    $('#dictCount').textContent = on;
+    // 顶栏显示总数（启用数在抽屉标题里）
+    $('#dictCount').textContent = (g.entries || []).length;
+    $('#dictAll').checked = (g.categories || []).length
+      ? g.categories.every(c => c.enabled)
+      : true;
   } catch (_) { S.glossary = { categories: [], entries: [] }; }
 
   renderBlocks();

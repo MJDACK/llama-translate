@@ -242,6 +242,56 @@ textarea:focus{border-color:var(--accent-dim);box-shadow:0 0 0 3px rgba(111,141,
 .ditem .e{color:var(--txt);font-family:var(--mono);font-size:12.5px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ditem .tick{color:var(--ok);font-size:11px;opacity:0;transition:.2s}
 .ditem.copied .tick{opacity:1}
+
+/* ---------- 词典 2.0 ---------- */
+/* .dbody 是 flex，hidden 属性会被 display:flex 盖掉，必须显式处理 */
+.dbody[hidden]{display:none}
+/* 抽屉是 flex 列：固定区不许被压缩，否则标题/组合台会被压成 0 高、文字飘出来 */
+.ddrawer{overflow:hidden;z-index:60}
+.ddrawer > .dhead,.ddrawer > .dtabs,.ddrawer > .dbuild,.ddrawer > .dadd{flex:0 0 auto}
+.ddrawer > .dbody{flex:1 1 auto;min-height:0}
+.dver{font-style:normal;font-size:10px;color:var(--accent);border:1px solid var(--accent-dim);border-radius:5px;padding:0 4px;margin-left:4px;vertical-align:1px}
+.dtabs{display:flex;gap:6px;padding:10px 15px 0;flex:0 0 auto}
+.dtab{
+  background:transparent;border:1px solid transparent;border-bottom:none;color:var(--dim);
+  font-size:12.5px;padding:5px 12px;border-radius:8px 8px 0 0;cursor:pointer;font-family:inherit;
+}
+.dtab:hover{color:var(--txt)}
+.dtab.active{background:#10131a;border-color:var(--line);color:var(--txt)}
+.drow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.dhint{font-size:11px;color:var(--dim2);cursor:default}
+.sel.sm{padding:3px 6px;font-size:11.5px;width:auto}
+.ditem .dstar,.ditem .dplus{
+  background:transparent;border:0;color:var(--dim2);font-size:13px;line-height:1;cursor:pointer;
+  padding:2px 4px;border-radius:5px;font-family:inherit;opacity:.5;transition:.12s;
+  min-width:24px;min-height:22px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+}
+.ditem:hover .dstar,.ditem:hover .dplus{opacity:1}
+.ditem .dstar.on{color:#e8c15a;opacity:1}
+.ditem .dstar:hover,.ditem .dplus:hover{background:#243049;color:var(--txt)}
+.ditem.picked{border-color:var(--accent-dim);background:#16203a}
+.ditem.copied{outline:1px solid var(--ok)}
+.dnote{
+  font-size:11px;color:var(--dim2);line-height:1.45;padding:0 8px 5px 8px;margin-top:-2px;
+  border-left:2px solid #232b3c;margin-left:8px;
+}
+.dgroup.fav{color:#e8c15a}
+.revtext{
+  background:#10131a;border:1px solid var(--line);color:var(--txt);border-radius:9px;
+  padding:8px 10px;font-size:12.5px;line-height:1.55;min-height:88px;resize:vertical;
+  outline:none;font-family:var(--mono);
+}
+.revtext:focus{border-color:var(--accent-dim)}
+.revhit.miss .z{color:var(--dim2)}
+.dbuild{border-top:1px solid var(--line);padding:8px 15px;background:var(--bg2);flex:0 0 auto}
+.dbuildHead{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim);margin-bottom:6px}
+.dbuildHead em{font-style:normal;color:var(--accent);font-family:var(--mono)}
+.dbuildText{
+  font-family:var(--mono);font-size:11.5px;line-height:1.5;color:var(--txt);
+  background:#0d1016;border:1px solid var(--line);border-radius:8px;padding:6px 9px;
+  max-height:74px;overflow-y:auto;word-break:break-word;
+}
+.dbuildText.noSel{color:var(--dim2);font-family:inherit;font-size:11.5px}
 .dadd{border-top:1px solid var(--line);padding:10px 15px;background:var(--bg2);flex:0 0 auto}
 .daddTitle{font-size:12px;color:var(--dim);margin-bottom:8px}
 .daddRow{display:grid;grid-template-columns:1fr 1.3fr 108px 60px;gap:6px;align-items:center}

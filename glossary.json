@@ -1,57 +1,66 @@
 {
-  "version": 1,
+  "version": 2,
   "categories": [
     {
       "id": "quality",
       "name": "画质 / 质感",
-      "enabled": true
+      "enabled": false
     },
     {
       "id": "style",
       "name": "风格 / 画派",
-      "enabled": true
+      "enabled": false
     },
     {
       "id": "camera",
       "name": "镜头 / 光线 / 构图",
-      "enabled": true
+      "enabled": false
     },
     {
       "id": "character",
       "name": "人物 / 服饰",
-      "enabled": true
+      "enabled": false
     },
     {
       "id": "scene",
       "name": "场景 / 环境",
-      "enabled": true
+      "enabled": false
     },
     {
       "id": "material",
       "name": "材质 / 特效",
-      "enabled": true
+      "enabled": false
     },
     {
       "id": "mood",
       "name": "氛围 / 情绪",
-      "enabled": true
+      "enabled": false
     },
     {
       "id": "format",
       "name": "画幅 / 用途",
-      "enabled": true
+      "enabled": false
     }
   ],
   "entries": [
     {
       "zh": "杰作",
       "en": "masterpiece",
-      "cat": "quality"
+      "cat": "quality",
+      "note": "质量词只在 SD1.5/XL 有明显作用，Flux、Qwen-Image 这类基本无效，别堆",
+      "aliases": [
+        "杰作",
+        "大作"
+      ]
     },
     {
       "zh": "最佳质量",
       "en": "best quality",
-      "cat": "quality"
+      "cat": "quality",
+      "note": "和 masterpiece 二选一就够，重复堆叠不会变好",
+      "aliases": [
+        "最佳品质"
+      ]
     },
     {
       "zh": "超高清",
@@ -66,7 +75,11 @@
     {
       "zh": "高分辨率",
       "en": "high resolution",
-      "cat": "quality"
+      "cat": "quality",
+      "note": "想提高细节优先加分辨率/放大流程，不是加这个词",
+      "aliases": [
+        "高解析"
+      ]
     },
     {
       "zh": "4K",
@@ -81,22 +94,40 @@
     {
       "zh": "超精细",
       "en": "ultra-detailed",
-      "cat": "quality"
+      "cat": "quality",
+      "note": "容易让画面变“糊满细节”，人像慎用，可与 texture 类词冲突",
+      "aliases": [
+        "超细节",
+        "极细节"
+      ]
     },
     {
       "zh": "精细细节",
       "en": "intricate details",
-      "cat": "quality"
+      "cat": "quality",
+      "note": "适合机械、花纹、布料特写；加在人脸上会变脏",
+      "aliases": [
+        "繁复细节"
+      ]
     },
     {
       "zh": "锐利对焦",
       "en": "sharp focus",
-      "cat": "quality"
+      "cat": "quality",
+      "note": "想全画面锐利就加；配 shallow DOF 会互相打架",
+      "aliases": [
+        "清晰对焦"
+      ]
     },
     {
       "zh": "照片级写实",
       "en": "photorealistic",
-      "cat": "quality"
+      "cat": "quality",
+      "note": "真人向用这个；和 anime style 同时出现会出四不像",
+      "aliases": [
+        "照片级",
+        "拟真"
+      ]
     },
     {
       "zh": "写实摄影",
@@ -106,22 +137,36 @@
     {
       "zh": "电影感",
       "en": "cinematic look",
-      "cat": "quality"
+      "cat": "quality",
+      "note": "偏调色观感；要电影打光用 cinematic lighting 更准",
+      "aliases": [
+        "电影感"
+      ]
     },
     {
       "zh": "HDR",
       "en": "HDR",
-      "cat": "quality"
+      "cat": "quality",
+      "note": "容易过曝、发灰；已经有强对比就别加"
     },
     {
       "zh": "赛博朋克",
       "en": "cyberpunk",
-      "cat": "style"
+      "cat": "style",
+      "note": "赛博朋克；想要夜景霓虹再搭 neon-lit street",
+      "aliases": [
+        "赛博",
+        "赛伯朋克"
+      ]
     },
     {
       "zh": "蒸汽朋克",
       "en": "steampunk",
-      "cat": "style"
+      "cat": "style",
+      "note": "蒸汽朋克；黄铜/齿轮质感可再配 metallic texture",
+      "aliases": [
+        "蒸汽"
+      ]
     },
     {
       "zh": "柴油朋克",
@@ -136,7 +181,12 @@
     {
       "zh": "二次元",
       "en": "anime style",
-      "cat": "style"
+      "cat": "style",
+      "note": "二次元；和 photorealistic 互斥，别同时上",
+      "aliases": [
+        "动漫风",
+        "二次元"
+      ]
     },
     {
       "zh": "日系",
@@ -146,7 +196,12 @@
     {
       "zh": "国风",
       "en": "Chinese style",
-      "cat": "style"
+      "cat": "style",
+      "note": "国风；具体朝代感要再指明（ancient Chinese style）",
+      "aliases": [
+        "国风",
+        "中国风"
+      ]
     },
     {
       "zh": "古风",
@@ -156,7 +211,12 @@
     {
       "zh": "水墨",
       "en": "ink wash painting",
-      "cat": "style"
+      "cat": "style",
+      "note": "水墨；容易发灰，背景建议留白",
+      "aliases": [
+        "水墨画",
+        "水墨风"
+      ]
     },
     {
       "zh": "工笔画",
@@ -166,7 +226,8 @@
     {
       "zh": "油画",
       "en": "oil painting",
-      "cat": "style"
+      "cat": "style",
+      "note": "油画；会带笔触，想要干净画面慎用"
     },
     {
       "zh": "丙烯画",
@@ -176,7 +237,11 @@
     {
       "zh": "水彩",
       "en": "watercolor painting",
-      "cat": "style"
+      "cat": "style",
+      "note": "水彩；适合浅色、通透，别配高对比 HDR",
+      "aliases": [
+        "水彩画"
+      ]
     },
     {
       "zh": "厚涂",
@@ -191,12 +256,20 @@
     {
       "zh": "线稿",
       "en": "line art",
-      "cat": "style"
+      "cat": "style",
+      "note": "线稿；常与 monochrome、white background 搭配",
+      "aliases": [
+        "线条画"
+      ]
     },
     {
       "zh": "像素风",
       "en": "pixel art",
-      "cat": "style"
+      "cat": "style",
+      "note": "像素风；分辨率设小一点更自然，别开高清放大",
+      "aliases": [
+        "像素风"
+      ]
     },
     {
       "zh": "低多边形",
@@ -206,7 +279,11 @@
     {
       "zh": "3D渲染",
       "en": "3D render",
-      "cat": "style"
+      "cat": "style",
+      "note": "3D 渲染；想要玩具/模型感再配 claymation 或 low poly",
+      "aliases": [
+        "三维渲染"
+      ]
     },
     {
       "zh": "黏土",
@@ -271,7 +348,11 @@
     {
       "zh": "概念艺术",
       "en": "concept art",
-      "cat": "style"
+      "cat": "style",
+      "note": "概念设计；常出设定图那种构图，适合场景",
+      "aliases": [
+        "概念设定"
+      ]
     },
     {
       "zh": "奇幻插画",
@@ -281,17 +362,29 @@
     {
       "zh": "暗黑奇幻",
       "en": "dark fantasy",
-      "cat": "style"
+      "cat": "style",
+      "note": "暗黑奇幻；会自动降压色调，别和环境词里的 bright 撞",
+      "aliases": [
+        "黑奇幻"
+      ]
     },
     {
       "zh": "赛璐璐",
       "en": "cel shading",
-      "cat": "style"
+      "cat": "style",
+      "note": "赛璐璐上色；动画感的关键词，配 flat color 更纯",
+      "aliases": [
+        "赛璐璐"
+      ]
     },
     {
       "zh": "厚涂插画",
       "en": "painterly illustration",
-      "cat": "style"
+      "cat": "style",
+      "note": "厚涂插画；会有明显笔触，和 photorealism 冲突",
+      "aliases": [
+        "厚涂"
+      ]
     },
     {
       "zh": "科幻",
@@ -311,17 +404,29 @@
     {
       "zh": "广角镜头",
       "en": "wide-angle lens",
-      "cat": "camera"
+      "cat": "camera",
+      "note": "广角；会把边缘拉变形，人像别贴太近",
+      "aliases": [
+        "广角"
+      ]
     },
     {
       "zh": "长焦镜头",
       "en": "telephoto lens",
-      "cat": "camera"
+      "cat": "camera",
+      "note": "长焦；压缩空间感，适合人像/远景",
+      "aliases": [
+        "长焦"
+      ]
     },
     {
       "zh": "微距",
       "en": "macro shot",
-      "cat": "camera"
+      "cat": "camera",
+      "note": "微距；主体极近，适合材质、昆虫、水滴",
+      "aliases": [
+        "微距"
+      ]
     },
     {
       "zh": "鱼眼镜头",
@@ -331,17 +436,31 @@
     {
       "zh": "浅景深",
       "en": "shallow depth of field",
-      "cat": "camera"
+      "cat": "camera",
+      "note": "浅景深=背景模糊；要虚化用这个，别和 sharp focus 同用",
+      "aliases": [
+        "浅景深",
+        "景深浅"
+      ]
     },
     {
       "zh": "背景虚化",
       "en": "bokeh",
-      "cat": "camera"
+      "cat": "camera",
+      "note": "只描述“光斑”这个效果，不等于背景虚化；要虚化得配 shallow DOF",
+      "aliases": [
+        "光斑",
+        "焦外"
+      ]
     },
     {
       "zh": "逆光",
       "en": "backlighting",
-      "cat": "camera"
+      "cat": "camera",
+      "note": "逆光；容易过曝，人像常配 rim light",
+      "aliases": [
+        "逆光"
+      ]
     },
     {
       "zh": "侧光",
@@ -361,12 +480,20 @@
     {
       "zh": "轮廓光",
       "en": "rim light",
-      "cat": "camera"
+      "cat": "camera",
+      "note": "轮廓光；抠出边缘用，配 backlighting 很稳",
+      "aliases": [
+        "边缘光"
+      ]
     },
     {
       "zh": "伦勃朗光",
       "en": "Rembrandt lighting",
-      "cat": "camera"
+      "cat": "camera",
+      "note": "伦勃朗光；人像半脸阴影，脸部特写最见效",
+      "aliases": [
+        "伦勃朗布光"
+      ]
     },
     {
       "zh": "顶光",
@@ -386,12 +513,21 @@
     {
       "zh": "体积光",
       "en": "volumetric lighting",
-      "cat": "camera"
+      "cat": "camera",
+      "note": "体积光/丁达尔；需要有雾或尘，否则看不出来",
+      "aliases": [
+        "体积光",
+        "丁达尔"
+      ]
     },
     {
       "zh": "电影级打光",
       "en": "cinematic lighting",
-      "cat": "camera"
+      "cat": "camera",
+      "note": "电影打光；比 cinematic look 更直接作用于光",
+      "aliases": [
+        "电影光"
+      ]
     },
     {
       "zh": "高对比度",
@@ -416,7 +552,12 @@
     {
       "zh": "特写",
       "en": "close-up",
-      "cat": "camera"
+      "cat": "camera",
+      "note": "近景；脸或物体占画面主体，和 full body shot 互斥",
+      "aliases": [
+        "特写",
+        "近景"
+      ]
     },
     {
       "zh": "面部特写",
@@ -426,7 +567,12 @@
     {
       "zh": "全身像",
       "en": "full body shot",
-      "cat": "camera"
+      "cat": "camera",
+      "note": "全身；必须写，否则模型默认半身或大头",
+      "aliases": [
+        "全身",
+        "全身照"
+      ]
     },
     {
       "zh": "半身像",
@@ -446,12 +592,21 @@
     {
       "zh": "三分法构图",
       "en": "rule of thirds composition",
-      "cat": "camera"
+      "cat": "camera",
+      "note": "三分构图；和 centered composition 互斥",
+      "aliases": [
+        "三分法",
+        "九宫格"
+      ]
     },
     {
       "zh": "对称构图",
       "en": "symmetrical composition",
-      "cat": "camera"
+      "cat": "camera",
+      "note": "对称构图；建筑、正面人像好用",
+      "aliases": [
+        "对称"
+      ]
     },
     {
       "zh": "中心构图",
@@ -471,7 +626,12 @@
     {
       "zh": "洛丽塔",
       "en": "lolita fashion",
-      "cat": "character"
+      "cat": "character",
+      "note": "洛丽塔；常配 frills、lace 细节词",
+      "aliases": [
+        "洛丽塔",
+        "lo裙"
+      ]
     },
     {
       "zh": "哥特洛丽塔",
@@ -481,12 +641,20 @@
     {
       "zh": "汉服",
       "en": "hanfu",
-      "cat": "character"
+      "cat": "character",
+      "note": "汉服；朝代感要再指明会更准",
+      "aliases": [
+        "汉服"
+      ]
     },
     {
       "zh": "和服",
       "en": "kimono",
-      "cat": "character"
+      "cat": "character",
+      "note": "和服；和 hanfu 别同时写",
+      "aliases": [
+        "和服"
+      ]
     },
     {
       "zh": "旗袍",
@@ -496,7 +664,11 @@
     {
       "zh": "女仆装",
       "en": "maid outfit",
-      "cat": "character"
+      "cat": "character",
+      "note": "女仆装；配 cafe 场景很自然",
+      "aliases": [
+        "女仆装"
+      ]
     },
     {
       "zh": "水手服",
@@ -541,12 +713,21 @@
     {
       "zh": "赛博义体",
       "en": "cybernetic implants",
-      "cat": "character"
+      "cat": "character",
+      "note": "义体植入；适合赛博题材，配 neon 光更对味",
+      "aliases": [
+        "义体"
+      ]
     },
     {
       "zh": "机械臂",
       "en": "mechanical arm",
-      "cat": "character"
+      "cat": "character",
+      "note": "机械臂；需要材质词才不塑料，配 metallic texture",
+      "aliases": [
+        "义肢",
+        "机械手臂"
+      ]
     },
     {
       "zh": "精灵耳",
@@ -556,7 +737,11 @@
     {
       "zh": "兽耳",
       "en": "animal ears",
-      "cat": "character"
+      "cat": "character",
+      "note": "兽耳；cat ears 更具体，二选一",
+      "aliases": [
+        "兽耳"
+      ]
     },
     {
       "zh": "猫耳",
@@ -581,7 +766,11 @@
     {
       "zh": "双马尾",
       "en": "twin tails",
-      "cat": "character"
+      "cat": "character",
+      "note": "双马尾；和 ponytail 同时写会打架",
+      "aliases": [
+        "双马尾"
+      ]
     },
     {
       "zh": "单马尾",
@@ -591,7 +780,11 @@
     {
       "zh": "银发",
       "en": "silver hair",
-      "cat": "character"
+      "cat": "character",
+      "note": "银发；想纯白用 white hair，两者观感不同",
+      "aliases": [
+        "银发"
+      ]
     },
     {
       "zh": "白发",
@@ -606,7 +799,11 @@
     {
       "zh": "异色瞳",
       "en": "heterochromia",
-      "cat": "character"
+      "cat": "character",
+      "note": "异色瞳；左右眼不同色，特写才看得出来",
+      "aliases": [
+        "异色瞳"
+      ]
     },
     {
       "zh": "纹身",
@@ -621,7 +818,11 @@
     {
       "zh": "雀斑",
       "en": "freckles",
-      "cat": "character"
+      "cat": "character",
+      "note": "雀斑；需要近景/特写才明显",
+      "aliases": [
+        "雀斑"
+      ]
     },
     {
       "zh": "赛博武士",
@@ -631,7 +832,11 @@
     {
       "zh": "废墟",
       "en": "ruins",
-      "cat": "scene"
+      "cat": "scene",
+      "note": "废墟；适合废土/末世，配 debris",
+      "aliases": [
+        "废墟"
+      ]
     },
     {
       "zh": "赛博都市",
@@ -641,12 +846,20 @@
     {
       "zh": "霓虹街景",
       "en": "neon-lit street",
-      "cat": "scene"
+      "cat": "scene",
+      "note": "霓虹街道；夜景必备，白天场景会矛盾",
+      "aliases": [
+        "霓虹街"
+      ]
     },
     {
       "zh": "雨夜",
       "en": "rainy night",
-      "cat": "scene"
+      "cat": "scene",
+      "note": "雨夜；会自动加反光地面，配 wet reflective ground 重复",
+      "aliases": [
+        "雨夜"
+      ]
     },
     {
       "zh": "日落",
@@ -661,12 +874,20 @@
     {
       "zh": "晨雾",
       "en": "morning mist",
-      "cat": "scene"
+      "cat": "scene",
+      "note": "晨雾；体积光的好搭档",
+      "aliases": [
+        "晨雾"
+      ]
     },
     {
       "zh": "星空",
       "en": "starry sky",
-      "cat": "scene"
+      "cat": "scene",
+      "note": "星空；想要银河用 milky way，两个一起写容易糊",
+      "aliases": [
+        "星空"
+      ]
     },
     {
       "zh": "银河",
@@ -716,7 +937,11 @@
     {
       "zh": "图书馆",
       "en": "library",
-      "cat": "scene"
+      "cat": "scene",
+      "note": "图书馆；室内景，注意和 outdoor 光线词冲突",
+      "aliases": [
+        "图书馆"
+      ]
     },
     {
       "zh": "古堡",
@@ -771,7 +996,11 @@
     {
       "zh": "金属质感",
       "en": "metallic texture",
-      "cat": "material"
+      "cat": "material",
+      "note": "金属质感；机械、盔甲必配",
+      "aliases": [
+        "金属质感"
+      ]
     },
     {
       "zh": "反光",
@@ -781,7 +1010,11 @@
     {
       "zh": "半透明",
       "en": "translucent",
-      "cat": "material"
+      "cat": "material",
+      "note": "半透明；纱、皮肤、玻璃都能用，别全图都加",
+      "aliases": [
+        "半透明"
+      ]
     },
     {
       "zh": "磨砂",
@@ -811,12 +1044,20 @@
     {
       "zh": "粒子效果",
       "en": "particle effects",
-      "cat": "material"
+      "cat": "material",
+      "note": "粒子特效；会加很多小点，人像背景慎用",
+      "aliases": [
+        "粒子"
+      ]
     },
     {
       "zh": "光斑",
       "en": "light spots",
-      "cat": "material"
+      "cat": "material",
+      "note": "光点；和 bokeh 有点像，后者更圆更虚",
+      "aliases": [
+        "光点"
+      ]
     },
     {
       "zh": "霓虹反光",
@@ -836,7 +1077,11 @@
     {
       "zh": "发光",
       "en": "glowing effect",
-      "cat": "material"
+      "cat": "material",
+      "note": "发光；自发光物体用，配 volumetric 才亮得起来",
+      "aliases": [
+        "自发光"
+      ]
     },
     {
       "zh": "全息投影",
@@ -851,7 +1096,11 @@
     {
       "zh": "忧郁",
       "en": "melancholy",
-      "cat": "mood"
+      "cat": "mood",
+      "note": "忧郁；会压暗色调，别和 bright/cheerful 类词同用",
+      "aliases": [
+        "忧郁"
+      ]
     },
     {
       "zh": "神秘",
@@ -861,7 +1110,11 @@
     {
       "zh": "宁静",
       "en": "serene",
-      "cat": "mood"
+      "cat": "mood",
+      "note": "宁静；偏冷色调、留白多",
+      "aliases": [
+        "宁静"
+      ]
     },
     {
       "zh": "压迫感",
@@ -886,7 +1139,11 @@
     {
       "zh": "空灵",
       "en": "ethereal",
-      "cat": "mood"
+      "cat": "mood",
+      "note": "空灵；常配 mist、soft light",
+      "aliases": [
+        "空灵"
+      ]
     },
     {
       "zh": "恐怖",
@@ -896,7 +1153,11 @@
     {
       "zh": "梦幻",
       "en": "dreamy",
-      "cat": "mood"
+      "cat": "mood",
+      "note": "梦幻；会加柔光和色偏，写实向慎用",
+      "aliases": [
+        "梦幻"
+      ]
     },
     {
       "zh": "温馨",
@@ -916,7 +1177,11 @@
     {
       "zh": "竖版",
       "en": "vertical composition",
-      "cat": "format"
+      "cat": "format",
+      "note": "竖构图；出图尺寸也要设竖的，否则白搭",
+      "aliases": [
+        "竖构图"
+      ]
     },
     {
       "zh": "横版",
@@ -931,7 +1196,11 @@
     {
       "zh": "海报",
       "en": "poster design",
-      "cat": "format"
+      "cat": "format",
+      "note": "海报设计；会加排版元素，纯插画别用",
+      "aliases": [
+        "海报"
+      ]
     },
     {
       "zh": "封面插画",
@@ -946,12 +1215,17 @@
     {
       "zh": "9:16",
       "en": "9:16 aspect ratio",
-      "cat": "format"
+      "cat": "format",
+      "note": "9:16；只影响构图倾向，实际尺寸要在出图设置里改",
+      "aliases": [
+        "竖屏比例"
+      ]
     },
     {
       "zh": "16:9",
       "en": "16:9 aspect ratio",
       "cat": "format"
     }
-  ]
+  ],
+  "updatedAt": "2026-11-15"
 }
