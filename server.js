@@ -268,6 +268,21 @@ function netFailMsg(ep, e) {
   return `连不上 ${name}（${host}）：${e.message}`;
 }
 
+// 每个来源「思考开关」怎么传，试出来就记住，别每次都撞一遍 400
+//   'disabled' = 支持 thinking:{type:disabled}（DeepSeek 这类）
+//   'adaptive' = 只能 adaptive / 不传（MiniMax-M3.1-Flash 就是，传 disabled 直接被拒）
+//   'none'     = 该来源不认这个字段，干脆不传
+const thinkingMode = {};
+
+function pickThinkingMode(p) {
+  const id = (p && p.id) || 'local';
+  if (thinkingMode[id]) return thinkingMode[id];
+  const host = (() => { try { return new URL(p.baseURL).host.toLowerCase(); } catch (_) { return ''; } })();
+  if (/(^|\.)deepseek\.com$/.test(host)) return 'disabled';
+  if (host.endsWith('minimax.io') || host.endsWith('minimaxi.com')) return 'adaptive';
+  return 'none';
+}
+
 // 远端 API 的 body 要求很严：必须带 model，多余字段会被判 422
 // （DeepSeek 官方就是这样：missing field `model` / unexpected field）。
 function llmPayload(extra) {
@@ -283,17 +298,13 @@ function llmPayload(extra) {
     max_tokens: extra.max_tokens
   };
   if (extra.stream !== undefined) out.stream = extra.stream;
-  // 这类模型会先吐一大段思考，把 max_tokens 吃光、正文为空（DeepSeek 上是
-  // reasoning_content + finish=length；MiniMax-M3 更麻烦，思考直接塞进 content
-  // 的 <think>…</think> 里）。
-  //   deep=on  → 不传参数，用服务端默认（会思考，慢但细）
-  //   deep=off → thinking:{type:'disabled'}
-  const host = (() => { try { return new URL(p.baseURL).host.toLowerCase(); } catch (_) { return ''; } })();
-  const thinks = /(^|\.)deepseek\.com$/.test(host) || host.endsWith('minimax.io') || host.endsWith('minimaxi.com');
-  if (thinks && !extra.deep) {
-    // 注意：只传 disabled。传 enabled 会被 MiniMax 判 400（invalid thinking），
-    // 想让它思考就干脆不传这个字段，用服务端默认。
-    out.thinking = { type: 'disabled' };
+  // 思考开关：关掉能省 token 也能避免「只有思考没有正文」；但有的模型强制要思考
+  // （MiniMax-M3.1-Flash：thinking.type=disabled 直接 400）。deep=false 才去关。
+  if (!extra.deep) {
+    const mode = pickThinkingMode(p);
+    if (mode === 'disabled') out.thinking = { type: 'disabled' };
+    else if (mode === 'adaptive') out.thinking = { type: 'adaptive' };
+    // mode === 'none' 就什么都不加
   }
   delete out.deep;
   return out;
@@ -877,7 +888,42 @@ async function llamaStream(messages, opts, onDelta, signal) {
     if (e.name === 'AbortError') throw e;
     throw new Error(netFailMsg(ep, e));
   }
+  if (!r.ok) {
+    const text = await r.text();
+    // 有的模型强制要思考，塞 thinking:{type:disabled} 会 400：
+    // 记住这个来源不能关，去掉该字段再试一次（只重试一次）。
+    const p = activeProvider();
+    if (r.status === 400 && payload.thinking && /thinking|reasoning|adaptive/i.test(text) && p) {
+      thinkingMode[p.id] = 'none';
+      log(`来源 ${p.id} 不接受 thinking 参数，去掉后重试`);
+      delete payload.thinking;
+      return llamaStreamFrom(ep, payload, onDelta, signal, messages, opts);
+    }
+    throw new Error(`${ep.local ? 'llama-server' : providerById(providers.active)?.name || 'API'} ${r.status}: ${text.slice(0, 300)}`);
+  }
+
+  return pumpStream(r, onDelta);
+}
+
+// 400 重试时复用：把已经发过的那次请求再走一遍
+async function llamaStreamFrom(ep, payload, onDelta, signal, messages, opts) {
+  let r;
+  try {
+    r = await fetch(ep.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...ep.headers },
+      body: JSON.stringify(payload),
+      signal
+    });
+  } catch (e) {
+    if (e.name === 'AbortError') throw e;
+    throw new Error(netFailMsg(ep, e));
+  }
   if (!r.ok) throw new Error(`${ep.local ? 'llama-server' : providerById(providers.active)?.name || 'API'} ${r.status}: ${(await r.text()).slice(0, 300)}`);
+  return pumpStream(r, onDelta);
+}
+
+async function pumpStream(r, onDelta) {
 
   const reader = r.body.getReader();
   const dec = new TextDecoder();
@@ -952,8 +998,26 @@ async function llamaOnce(messages, opts = {}) {
     throw new Error(netFailMsg(ep, e));
   }
   const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(`${ep.local ? 'llama-server' : providerById(providers.active)?.name || 'API'} ${r.status}: ${JSON.stringify(j).slice(0, 300)}`);
-  return j.choices?.[0]?.message?.content || '';
+  if (!r.ok) {
+    const text = JSON.stringify(j);
+    // 同 llamaStream：模型强制思考时，去掉 thinking 再试一次
+    const p = activeProvider();
+    if (r.status === 400 && payload.thinking && /thinking|reasoning|adaptive/i.test(text) && p) {
+      thinkingMode[p.id] = 'none';
+      log(`来源 ${p.id} 不接受 thinking 参数，去掉后重试（非流式）`);
+      delete payload.thinking;
+      const r2 = await fetch(ep.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...ep.headers },
+        body: JSON.stringify(payload)
+      });
+      const j2 = await r2.json().catch(() => ({}));
+      if (!r2.ok) throw new Error(`${ep.local ? 'llama-server' : providerById(providers.active)?.name || 'API'} ${r2.status}: ${JSON.stringify(j2).slice(0, 300)}`);
+      return stripThink(j2.choices?.[0]?.message?.content || '');
+    }
+    throw new Error(`${ep.local ? 'llama-server' : providerById(providers.active)?.name || 'API'} ${r.status}: ${text.slice(0, 300)}`);
+  }
+  return stripThink(j.choices?.[0]?.message?.content || '');
 }
 
 /* ------------------------------------------------------------------ */

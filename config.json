@@ -19,7 +19,7 @@
       "model": "C:\\Users\\majia\\AppData\\Local\\llama-translate\\root\\models\\qwen4B\\Qwen3.5-4B-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf",
       "mmproj": "C:\\Users\\majia\\AppData\\Local\\llama-translate\\root\\models\\qwen4B\\mmproj-Qwen3.5-4B-Uncensored-HauhauCS-Aggressive-BF16.gguf",
       "ngl": 99,
-      "ctx": 16384
+      "ctx": 122768
     },
     {
       "id": "qwen2b",
